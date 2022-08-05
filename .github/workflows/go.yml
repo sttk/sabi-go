@@ -1,0 +1,26 @@
+name: Go CI
+
+on:
+  push:
+    branches: [ '*' ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gover: [1.18]
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.gover }}
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Test
+      run: go test -v -cover ./...
