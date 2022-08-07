@@ -45,6 +45,8 @@ func ErrBy(reason any, cause ...error) Err {
 		err.line = line
 	}
 
+	notifyErr(err)
+
 	return err
 }
 
