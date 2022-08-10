@@ -1,18 +1,35 @@
 package sabi
 
 import (
+	"container/list"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
 
+var logs list.List
+
+var willFooConnFailToCommit bool = false
+var willFooConnFailToRollback bool = false
+var willFooConnFailToClose bool = false
+
 func ClearGlobalXioConnCfgs() {
 	isGlobalXioConnCfgSealed = false
 	globalXioConnCfgMap = make(map[string]XioConnCfg)
+
+	logs.Init()
+
+	willFooConnFailToCommit = false
+	willFooConnFailToRollback = false
+	willFooConnFailToClose = false
 }
 
 type /* error reasons */ (
 	InvalidXioConn struct{}
+
+	FooConnFailedToCommit   struct{}
+	FooConnFailedToRollback struct{}
+	FooConnFailedToClose    struct{}
 )
 
 var willFailToCreateXioConn bool = false
@@ -22,14 +39,26 @@ type FooXioConn struct {
 }
 
 func (conn *FooXioConn) Commit() Err {
+	if willFooConnFailToCommit {
+		return ErrBy(FooConnFailedToCommit{})
+	}
+	logs.PushBack("FooXioConn#Commit")
 	return Ok()
 }
 
 func (conn *FooXioConn) Rollback() Err {
+	if willFooConnFailToRollback {
+		return ErrBy(FooConnFailedToRollback{})
+	}
+	logs.PushBack("FooXioConn#Rollback")
 	return Ok()
 }
 
 func (conn *FooXioConn) Close() Err {
+	if willFooConnFailToClose {
+		return ErrBy(FooConnFailedToClose{})
+	}
+	logs.PushBack("FooXioConn#Close")
 	return Ok()
 }
 
@@ -64,14 +93,17 @@ type BarXioConn struct {
 }
 
 func (conn *BarXioConn) Commit() Err {
+	logs.PushBack("BarXioConn#Commit")
 	return Ok()
 }
 
 func (conn *BarXioConn) Rollback() Err {
+	logs.PushBack("BarXioConn#Rollback")
 	return Ok()
 }
 
 func (conn *BarXioConn) Close() Err {
+	logs.PushBack("BarXioConn#Close")
 	return Ok()
 }
 
@@ -375,4 +407,199 @@ func TestXioBase_InnerMap(t *testing.T) {
 
 	m = base.InnerMap()
 	assert.Equal(t, m["param"], 456)
+}
+
+func TestXioBase_commit(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	err := base.commit()
+	assert.True(t, err.IsOk())
+
+	assert.Equal(t, logs.Len(), 2)
+	if logs.Front().Value == "FooXioConn#Commit" {
+		assert.Equal(t, logs.Front().Value, "FooXioConn#Commit")
+		assert.Equal(t, logs.Back().Value, "BarXioConn#Commit")
+	} else {
+		assert.Equal(t, logs.Front().Value, "BarXioConn#Commit")
+		assert.Equal(t, logs.Back().Value, "FooXioConn#Commit")
+	}
+}
+
+func TestXioBase_commit_failed(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	willFooConnFailToCommit = true
+
+	err := base.commit()
+	assert.False(t, err.IsOk())
+	switch err.Reason().(type) {
+	case FailToCommitXioConn:
+		m := err.Get("Errors").(map[string]Err)
+		assert.Equal(t, m["foo"].ReasonName(), "FooConnFailedToCommit")
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	assert.Equal(t, logs.Len(), 1)
+	assert.Equal(t, logs.Back().Value, "BarXioConn#Commit")
+}
+
+func TestXioBase_rollback(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	err := base.rollback()
+	assert.True(t, err.IsOk())
+
+	assert.Equal(t, logs.Len(), 2)
+	if logs.Front().Value == "FooXioConn#Rollback" {
+		assert.Equal(t, logs.Front().Value, "FooXioConn#Rollback")
+		assert.Equal(t, logs.Back().Value, "BarXioConn#Rollback")
+	} else {
+		assert.Equal(t, logs.Front().Value, "BarXioConn#Rollback")
+		assert.Equal(t, logs.Back().Value, "FooXioConn#Rollback")
+	}
+}
+
+func TestXioBase_rollback_failed(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	willFooConnFailToRollback = true
+
+	err := base.rollback()
+	assert.False(t, err.IsOk())
+	switch err.Reason().(type) {
+	case FailToRollbackXioConn:
+		m := err.Get("Errors").(map[string]Err)
+		assert.Equal(t, m["foo"].ReasonName(), "FooConnFailedToRollback")
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	assert.Equal(t, logs.Len(), 1)
+	assert.Equal(t, logs.Back().Value, "BarXioConn#Rollback")
+}
+
+func TestXioBase_close(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	err := base.close()
+	assert.True(t, err.IsOk())
+
+	assert.Equal(t, logs.Len(), 2)
+	if logs.Front().Value == "FooXioConn#Close" {
+		assert.Equal(t, logs.Front().Value, "FooXioConn#Close")
+		assert.Equal(t, logs.Back().Value, "BarXioConn#Close")
+	} else {
+		assert.Equal(t, logs.Front().Value, "BarXioConn#Close")
+		assert.Equal(t, logs.Back().Value, "FooXioConn#Close")
+	}
+}
+
+func TestXioBase_close_failed(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, _ := fooXio.GetFooConn("foo")
+	assert.NotNil(t, fooConn)
+
+	barXio := NewBarXio(base)
+	barConn, _ := barXio.GetBarConn("bar")
+	assert.NotNil(t, barConn)
+
+	willFooConnFailToClose = true
+
+	err := base.close()
+	assert.False(t, err.IsOk())
+	switch err.Reason().(type) {
+	case FailToCloseXioConn:
+		m := err.Get("Errors").(map[string]Err)
+		assert.Equal(t, m["foo"].ReasonName(), "FooConnFailedToClose")
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	assert.Equal(t, logs.Len(), 1)
+	assert.Equal(t, logs.Back().Value, "BarXioConn#Close")
 }

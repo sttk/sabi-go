@@ -20,6 +20,24 @@ type /* error reasons */ (
 	FailToCreateXioConn struct {
 		Name string
 	}
+
+	// FailToCommitXioConn is an error reason which indicates that some
+	// connections to external data sources failed to commit.
+	FailToCommitXioConn struct {
+		Errors map[string]Err
+	}
+
+	// FailToRollbackXioConn is an error reason which indicates that some
+	// connections to external data sources failed to rollback.
+	FailToRollbackXioConn struct {
+		Errors map[string]Err
+	}
+
+	// FailToCloseXioConn is an error reason which indicates that some
+	// connections to external data sources failed to close.
+	FailToCloseXioConn struct {
+		Errors map[string]Err
+	}
 )
 
 // Xio is an interface for a set of inputs/outputs, and requires 2 methods:
@@ -143,4 +161,96 @@ func (base *XioBase) GetConn(name string) (XioConn, Err) {
 // multiple Xio data operations.
 func (base *XioBase) InnerMap() map[string]any {
 	return base.innerMap
+}
+
+type namedErr struct {
+	name string
+	err  Err
+}
+
+func (base *XioBase) commit() Err {
+	ch := make(chan namedErr)
+
+	for name, conn := range base.xioConnMap {
+		go func(name string, conn XioConn, ch chan namedErr) {
+			err := conn.Commit()
+			ne := namedErr{name: name, err: err}
+			ch <- ne
+		}(name, conn, ch)
+	}
+
+	errs := make(map[string]Err)
+	n := len(base.xioConnMap)
+	for i := 0; i < n; i++ {
+		select {
+		case ne := <-ch:
+			if !ne.err.IsOk() {
+				errs[ne.name] = ne.err
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return ErrBy(FailToCommitXioConn{Errors: errs})
+	}
+
+	return Ok()
+}
+
+func (base *XioBase) rollback() Err {
+	ch := make(chan namedErr)
+
+	for name, conn := range base.xioConnMap {
+		go func(name string, conn XioConn, ch chan namedErr) {
+			err := conn.Rollback()
+			ne := namedErr{name: name, err: err}
+			ch <- ne
+		}(name, conn, ch)
+	}
+
+	errs := make(map[string]Err)
+	n := len(base.xioConnMap)
+	for i := 0; i < n; i++ {
+		select {
+		case ne := <-ch:
+			if !ne.err.IsOk() {
+				errs[ne.name] = ne.err
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return ErrBy(FailToRollbackXioConn{Errors: errs})
+	}
+
+	return Ok()
+}
+
+func (base *XioBase) close() Err {
+	ch := make(chan namedErr)
+
+	for name, conn := range base.xioConnMap {
+		go func(name string, conn XioConn, ch chan namedErr) {
+			err := conn.Close()
+			ne := namedErr{name: name, err: err}
+			ch <- ne
+		}(name, conn, ch)
+	}
+
+	errs := make(map[string]Err)
+	n := len(base.xioConnMap)
+	for i := 0; i < n; i++ {
+		select {
+		case ne := <-ch:
+			if !ne.err.IsOk() {
+				errs[ne.name] = ne.err
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return ErrBy(FailToCloseXioConn{Errors: errs})
+	}
+
+	return Ok()
 }
