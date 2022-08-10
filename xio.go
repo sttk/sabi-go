@@ -22,6 +22,14 @@ type /* error reasons */ (
 	}
 )
 
+// Xio is an interface for a set of inputs/outputs, and requires 2 methods:
+// #GetConn which gets a connection to an external data sourc, and #innerMap
+// which gets a map to communicate data among multiple inputs/outputs.
+type Xio interface {
+	GetConn(name string) (XioConn, Err)
+	InnerMap() map[string]any
+}
+
 // XioConn is an interface which represents a connection to an external data
 // source and requires a methods: #Commit, #Rollback, and #Close to work
 // in a transaction process.

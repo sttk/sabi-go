@@ -2,6 +2,7 @@ package sabi
 
 import (
 	"github.com/stretchr/testify/assert"
+	"reflect"
 	"testing"
 )
 
@@ -32,6 +33,22 @@ func (conn *FooXioConn) Close() Err {
 	return Ok()
 }
 
+type FooXio struct {
+	Xio
+}
+
+func NewFooXio(xio Xio) FooXio {
+	return FooXio{Xio: xio}
+}
+
+func (xio FooXio) GetFooConn(name string) (*FooXioConn, Err) {
+	conn, err := xio.GetConn(name)
+	if !err.IsOk() {
+		return nil, err
+	}
+	return conn.(*FooXioConn), Ok()
+}
+
 type FooXioConnCfg struct {
 	Label string
 }
@@ -56,6 +73,22 @@ func (conn *BarXioConn) Rollback() Err {
 
 func (conn *BarXioConn) Close() Err {
 	return Ok()
+}
+
+type BarXio struct {
+	Xio
+}
+
+func NewBarXio(xio Xio) BarXio {
+	return BarXio{Xio: xio}
+}
+
+func (xio BarXio) GetBarConn(name string) (*BarXioConn, Err) {
+	conn, err := xio.GetConn(name)
+	if !err.IsOk() {
+		return nil, err
+	}
+	return conn.(*BarXioConn), Ok()
 }
 
 type BarXioConnCfg struct {
@@ -306,7 +339,27 @@ func TestXioBase_GetConn_failToCreateConn(t *testing.T) {
 	}
 }
 
-func TestXioBase_GetConn_InnerMap(t *testing.T) {
+func TestXioBase_GetConn_ForEachDataSrc(t *testing.T) {
+	ClearGlobalXioConnCfgs()
+	defer ClearGlobalXioConnCfgs()
+
+	base := NewXioBase()
+	base.AddLocalXioConnCfg("foo", FooXioConnCfg{})
+	base.AddLocalXioConnCfg("bar", &BarXioConnCfg{})
+	base.SealLocalXioConnCfgs()
+
+	fooXio := NewFooXio(base)
+	fooConn, err0 := fooXio.GetFooConn("foo")
+	assert.True(t, err0.IsOk())
+	assert.Equal(t, reflect.TypeOf(fooConn).String(), "*sabi.FooXioConn")
+
+	barXio := NewBarXio(base)
+	barConn, err1 := barXio.GetBarConn("bar")
+	assert.True(t, err1.IsOk())
+	assert.Equal(t, reflect.TypeOf(barConn).String(), "*sabi.BarXioConn")
+}
+
+func TestXioBase_InnerMap(t *testing.T) {
 	ClearGlobalXioConnCfgs()
 	defer ClearGlobalXioConnCfgs()
 
