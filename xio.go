@@ -9,33 +9,33 @@ import (
 )
 
 type /* error reasons */ (
-	// XioConnCfgIsNotFound is an error reason which indicates that a connection
+	// ConnCfgIsNotFound is an error reason which indicates that a connection
 	// configuration to an external data source is not found
-	XioConnCfgIsNotFound struct {
+	ConnCfgIsNotFound struct {
 		Name string
 	}
 
-	// FailToCreateXioConn is an error reason which indicates that it is failed
+	// FailToCreateConn is an error reason which indicates that it is failed
 	// to create a new connection to an external data source.
-	FailToCreateXioConn struct {
+	FailToCreateConn struct {
 		Name string
 	}
 
-	// FailToCommitXioConn is an error reason which indicates that some
+	// FailToCommitConn is an error reason which indicates that some
 	// connections to external data sources failed to commit.
-	FailToCommitXioConn struct {
+	FailToCommitConn struct {
 		Errors map[string]Err
 	}
 
-	// FailToRollbackXioConn is an error reason which indicates that some
+	// FailToRollbackConn is an error reason which indicates that some
 	// connections to external data sources failed to rollback.
-	FailToRollbackXioConn struct {
+	FailToRollbackConn struct {
 		Errors map[string]Err
 	}
 
-	// FailToCloseXioConn is an error reason which indicates that some
+	// FailToCloseConn is an error reason which indicates that some
 	// connections to external data sources failed to close.
-	FailToCloseXioConn struct {
+	FailToCloseConn struct {
 		Errors map[string]Err
 	}
 )
@@ -44,115 +44,77 @@ type /* error reasons */ (
 // #GetConn which gets a connection to an external data sourc, and #innerMap
 // which gets a map to communicate data among multiple inputs/outputs.
 type Xio interface {
-	GetConn(name string) (XioConn, Err)
+	GetConn(name string) (Conn, Err)
 	InnerMap() map[string]any
 }
 
-// XioConn is an interface which represents a connection to an external data
-// source and requires a methods: #Commit, #Rollback, and #Close to work
-// in a transaction process.
-type XioConn interface {
-	Commit() Err
-	Rollback() Err
-	Close() Err
-}
-
-// XioConnCfg is an interface which requires a method: #NewConn which creates
-// a connection to a data source with configuration parameters.
-type XioConnCfg interface {
-	NewConn() (XioConn, Err)
-}
-
-var (
-	isGlobalXioConnCfgSealed bool                  = false
-	globalXioConnCfgMap      map[string]XioConnCfg = make(map[string]XioConnCfg)
-	globalXioConnCfgMutex    sync.Mutex
-)
-
-// AddGlobalXioConnCfg registers a global XioConnCfg with its name to make
-// enable to use XioConn in all transactions.
-func AddGlobalXioConnCfg(name string, cfg XioConnCfg) {
-	globalXioConnCfgMutex.Lock()
-	defer globalXioConnCfgMutex.Unlock()
-
-	if !isGlobalXioConnCfgSealed {
-		globalXioConnCfgMap[name] = cfg
-	}
-}
-
-// SealGlobalXioConnCfgs makes unable to register any further global
-// XioConnCfg.
-func SealGlobalXioConnCfgs() {
-	isGlobalXioConnCfgSealed = true
-}
-
 // XioBase is a structure type which is used as an implementation of Xio
-// interface, and manages one or more XioConnCfg and XioConn used in
+// interface, and manages one or more ConnCfg and Conn used in
 // a transaction.
 type XioBase struct {
-	isLocalXioConnCfgSealed bool
-	localXioConnCfgMap      map[string]XioConnCfg
-	xioConnMap              map[string]XioConn
-	xioConnMutex            sync.Mutex
-	innerMap                map[string]any
-	error                   Err
+	isLocalConnCfgSealed bool
+	localConnCfgMap      map[string]ConnCfg
+	connMap              map[string]Conn
+	connMutex            sync.Mutex
+	innerMap             map[string]any
+	error                Err
 }
 
 // NewXioBase is creates a new XioBase.
 func NewXioBase() *XioBase {
 	return &XioBase{
-		isLocalXioConnCfgSealed: false,
-		localXioConnCfgMap:      make(map[string]XioConnCfg),
-		xioConnMap:              make(map[string]XioConn),
-		innerMap:                make(map[string]any),
-		error:                   Ok(),
+		isLocalConnCfgSealed: false,
+		localConnCfgMap:      make(map[string]ConnCfg),
+		connMap:              make(map[string]Conn),
+		innerMap:             make(map[string]any),
+		error:                Ok(),
 	}
 }
 
-// AddLocalXioConnCfg registers a transaction-local XioConnCfg with its name.
-func (base *XioBase) AddLocalXioConnCfg(name string, cfg XioConnCfg) {
-	base.xioConnMutex.Lock()
-	defer base.xioConnMutex.Unlock()
+// AddLocalConnCfg registers a transaction-local ConnCfg with its name.
+func (base *XioBase) AddLocalConnCfg(name string, cfg ConnCfg) {
+	base.connMutex.Lock()
+	defer base.connMutex.Unlock()
 
-	if !base.isLocalXioConnCfgSealed {
-		base.localXioConnCfgMap[name] = cfg
+	if !base.isLocalConnCfgSealed {
+		base.localConnCfgMap[name] = cfg
 	}
 }
 
-// SealLocalXioConnCfgs makes unable to register any further transaction-local
-// XioConnCfg.
-func (base *XioBase) SealLocalXioConnCfgs() {
-	base.isLocalXioConnCfgSealed = true
-	isGlobalXioConnCfgSealed = true
+// SealLocalConnCfgs makes unable to register any further transaction-local
+// ConnCfg.
+func (base *XioBase) SealLocalConnCfgs() {
+	base.isLocalConnCfgSealed = true
+	isGlobalConnCfgSealed = true
 }
 
-// GetConn gets a XioConn which is a connection to an external data source by
-// specified name. If a XioConn is not found, this method creates new one with
-// a local or global XioConnCfg associated with same name.
-func (base *XioBase) GetConn(name string) (XioConn, Err) {
-	conn := base.xioConnMap[name]
+// GetConn gets a Conn which is a connection to an external data source by
+// specified name. If a Conn is not found, this method creates new one with
+// a local or global ConnCfg associated with same name.
+func (base *XioBase) GetConn(name string) (Conn, Err) {
+	conn := base.connMap[name]
 	if conn != nil {
 		return conn, Ok()
 	}
 
-	cfg := base.localXioConnCfgMap[name]
+	cfg := base.localConnCfgMap[name]
 	if cfg == nil {
-		cfg = globalXioConnCfgMap[name]
+		cfg = globalConnCfgMap[name]
 	}
 	if cfg == nil {
-		return nil, ErrBy(XioConnCfgIsNotFound{Name: name})
+		return nil, ErrBy(ConnCfgIsNotFound{Name: name})
 	}
 
-	base.xioConnMutex.Lock()
-	defer base.xioConnMutex.Unlock()
+	base.connMutex.Lock()
+	defer base.connMutex.Unlock()
 
 	var err Err
-	conn, err = cfg.NewConn()
+	conn, err = cfg.CreateConn()
 	if !err.IsOk() {
-		return nil, ErrBy(FailToCreateXioConn{Name: name}, err)
+		return nil, ErrBy(FailToCreateConn{Name: name}, err)
 	}
 
-	base.xioConnMap[name] = conn
+	base.connMap[name] = conn
 
 	return conn, Ok()
 }
@@ -171,8 +133,8 @@ type namedErr struct {
 func (base *XioBase) commit() Err {
 	ch := make(chan namedErr)
 
-	for name, conn := range base.xioConnMap {
-		go func(name string, conn XioConn, ch chan namedErr) {
+	for name, conn := range base.connMap {
+		go func(name string, conn Conn, ch chan namedErr) {
 			err := conn.Commit()
 			ne := namedErr{name: name, err: err}
 			ch <- ne
@@ -180,7 +142,7 @@ func (base *XioBase) commit() Err {
 	}
 
 	errs := make(map[string]Err)
-	n := len(base.xioConnMap)
+	n := len(base.connMap)
 	for i := 0; i < n; i++ {
 		select {
 		case ne := <-ch:
@@ -191,66 +153,36 @@ func (base *XioBase) commit() Err {
 	}
 
 	if len(errs) > 0 {
-		return ErrBy(FailToCommitXioConn{Errors: errs})
+		return ErrBy(FailToCommitConn{Errors: errs})
 	}
 
 	return Ok()
 }
 
-func (base *XioBase) rollback() Err {
-	ch := make(chan namedErr)
+func (base *XioBase) rollback() {
+	var wg sync.WaitGroup
+	wg.Add(len(base.connMap))
 
-	for name, conn := range base.xioConnMap {
-		go func(name string, conn XioConn, ch chan namedErr) {
-			err := conn.Rollback()
-			ne := namedErr{name: name, err: err}
-			ch <- ne
-		}(name, conn, ch)
+	for _, conn := range base.connMap {
+		go func(conn Conn) {
+			defer wg.Done()
+			conn.Rollback()
+		}(conn)
 	}
 
-	errs := make(map[string]Err)
-	n := len(base.xioConnMap)
-	for i := 0; i < n; i++ {
-		select {
-		case ne := <-ch:
-			if !ne.err.IsOk() {
-				errs[ne.name] = ne.err
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return ErrBy(FailToRollbackXioConn{Errors: errs})
-	}
-
-	return Ok()
+	wg.Wait()
 }
 
-func (base *XioBase) close() Err {
-	ch := make(chan namedErr)
+func (base *XioBase) close() {
+	var wg sync.WaitGroup
+	wg.Add(len(base.connMap))
 
-	for name, conn := range base.xioConnMap {
-		go func(name string, conn XioConn, ch chan namedErr) {
-			err := conn.Close()
-			ne := namedErr{name: name, err: err}
-			ch <- ne
-		}(name, conn, ch)
+	for _, conn := range base.connMap {
+		go func(conn Conn) {
+			defer wg.Done()
+			conn.Close()
+		}(conn)
 	}
 
-	errs := make(map[string]Err)
-	n := len(base.xioConnMap)
-	for i := 0; i < n; i++ {
-		select {
-		case ne := <-ch:
-			if !ne.err.IsOk() {
-				errs[ne.name] = ne.err
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return ErrBy(FailToCloseXioConn{Errors: errs})
-	}
-
-	return Ok()
+	wg.Wait()
 }
