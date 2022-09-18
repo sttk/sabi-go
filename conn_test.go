@@ -7,8 +7,8 @@ import (
 )
 
 var logs list.List
-var willFailToCreateFooConn bool = false
-var willFailToCommitFooConn bool = false
+var WillFailToCreateFooConn bool = false
+var WillFailToCommitFooConn bool = false
 
 type /* error reason */ (
 	InvalidConn struct{}
@@ -20,8 +20,8 @@ func Clear() {
 
 	logs.Init()
 
-	willFailToCreateFooConn = false
-	willFailToCommitFooConn = false
+	WillFailToCreateFooConn = false
+	WillFailToCommitFooConn = false
 }
 
 type FooConn struct {
@@ -29,7 +29,7 @@ type FooConn struct {
 }
 
 func (conn *FooConn) Commit() Err {
-	if willFailToCommitFooConn {
+	if WillFailToCommitFooConn {
 		return ErrBy(InvalidConn{})
 	}
 	logs.PushBack("FooConn#Commit")
@@ -47,7 +47,7 @@ type FooConnCfg struct {
 }
 
 func (cfg FooConnCfg) CreateConn() (Conn, Err) {
-	if willFailToCreateFooConn {
+	if WillFailToCreateFooConn {
 		return nil, ErrBy(InvalidConn{})
 	}
 	return &FooConn{Label: cfg.Label}, Ok()
@@ -290,8 +290,8 @@ func TestConnBase_GetConn_failToCreateConn(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	willFailToCreateFooConn = true
-	defer func() { willFailToCreateFooConn = false }()
+	WillFailToCreateFooConn = true
+	defer func() { WillFailToCreateFooConn = false }()
 
 	base := NewConnBase()
 	base.addLocalConnCfg("foo", FooConnCfg{})
@@ -378,7 +378,7 @@ func TestConnBase_commit_failed(t *testing.T) {
 	assert.NotNil(t, barConn)
 	assert.True(t, barErr.IsOk())
 
-	willFailToCommitFooConn = true
+	WillFailToCommitFooConn = true
 
 	err := base.commit()
 	assert.False(t, err.IsOk())
