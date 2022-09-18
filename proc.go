@@ -23,7 +23,7 @@ func (proc Proc[D]) AddLocalConnCfg(name string, cfg ConnCfg) {
 
 // RunTxn is a method which runs logic functions specified as arguments in a
 // transaction.
-func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) (map[string]any, Err) {
+func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
 	proc.connBase.begin()
 
 	err := Ok()
@@ -45,7 +45,7 @@ func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) (map[string]any, Err) {
 
 	proc.connBase.close()
 
-	return proc.connBase.innerMap, err
+	return err
 }
 
 // NewTxn is a method which creates a transaction having specified logic

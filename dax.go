@@ -4,10 +4,8 @@
 
 package sabi
 
-// Dax is an interface for a set of data accesses, and requires two method:
-// #GetConn which gets a connection to an external data access, and #InnerMap
-// which gets a map to communicate data among multiple data accesses.
+// Dax is an interface for a set of data accesses, and requires a method:
+// #GetConn which gets a connection to an external data access.
 type Dax interface {
 	GetConn(name string) (Conn, Err)
-	InnerMap() map[string]any
 }

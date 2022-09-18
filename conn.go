@@ -71,7 +71,6 @@ type ConnBase struct {
 	isLocalConnCfgSealed bool
 	localConnCfgMap      map[string]ConnCfg
 	connMap              map[string]Conn
-	innerMap             map[string]any
 	connMutex            sync.Mutex
 }
 
@@ -81,7 +80,6 @@ func NewConnBase() *ConnBase {
 		isLocalConnCfgSealed: false,
 		localConnCfgMap:      make(map[string]ConnCfg),
 		connMap:              make(map[string]Conn),
-		innerMap:             make(map[string]any),
 	}
 }
 
@@ -123,12 +121,6 @@ func (base *ConnBase) GetConn(name string) (Conn, Err) {
 	base.connMap[name] = conn
 
 	return conn, Ok()
-}
-
-// InnerMap gets a singular map in a ConnBase/Proc for communicating among
-// multiple data accesses.
-func (base *ConnBase) InnerMap() map[string]any {
-	return base.innerMap
 }
 
 func (base *ConnBase) begin() {

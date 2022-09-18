@@ -55,6 +55,7 @@ func (cfg FooConnCfg) CreateConn() (Conn, Err) {
 
 type BarConn struct {
 	Label string
+	store map[string]string
 }
 
 func (conn *BarConn) Commit() Err {
@@ -67,13 +68,17 @@ func (conn *BarConn) Rollback() {
 func (conn *BarConn) Close() {
 	logs.PushBack("BarConn#Close")
 }
+func (conn *BarConn) Store(name, value string) {
+	conn.store[name] = value
+}
 
 type BarConnCfg struct {
 	Label string
+	Store map[string]string
 }
 
 func (cfg BarConnCfg) CreateConn() (Conn, Err) {
-	return &BarConn{Label: cfg.Label}, Ok()
+	return &BarConn{Label: cfg.Label, store: cfg.Store}, Ok()
 }
 
 func TestAddGlobalConnCfg(t *testing.T) {
@@ -133,7 +138,6 @@ func TestNewConnBase(t *testing.T) {
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 }
 
 func TestConnBase_addLocalConnCfg(t *testing.T) {
@@ -145,21 +149,18 @@ func TestConnBase_addLocalConnCfg(t *testing.T) {
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.addLocalConnCfg("foo", FooConnCfg{})
 
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.addLocalConnCfg("bar", &BarConnCfg{})
 
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 2)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 }
 
 func TestConnBase_begin(t *testing.T) {
@@ -172,7 +173,6 @@ func TestConnBase_begin(t *testing.T) {
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.addLocalConnCfg("foo", FooConnCfg{})
 
@@ -180,7 +180,6 @@ func TestConnBase_begin(t *testing.T) {
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.begin()
 
@@ -188,7 +187,6 @@ func TestConnBase_begin(t *testing.T) {
 	assert.True(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.addLocalConnCfg("bar", &BarConnCfg{})
 
@@ -196,7 +194,6 @@ func TestConnBase_begin(t *testing.T) {
 	assert.True(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 
 	base.isLocalConnCfgSealed = false
 
@@ -206,7 +203,6 @@ func TestConnBase_begin(t *testing.T) {
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 2)
 	assert.Equal(t, len(base.connMap), 0)
-	assert.Equal(t, len(base.innerMap), 0)
 }
 
 func TestConnBase_GetConn_withLocalConnCfg(t *testing.T) {
@@ -309,24 +305,6 @@ func TestConnBase_GetConn_failToCreateConn(t *testing.T) {
 	default:
 		assert.Fail(t, err.Error())
 	}
-}
-
-func TestConnBase_InnerMap(t *testing.T) {
-	Clear()
-	defer Clear()
-
-	base := NewConnBase()
-
-	m := base.InnerMap()
-	assert.Nil(t, m["param"])
-	m["param"] = 123
-
-	m = base.InnerMap()
-	assert.Equal(t, m["param"], 123)
-	m["param"] = 456
-
-	m = base.InnerMap()
-	assert.Equal(t, m["param"], 456)
 }
 
 func TestConnBase_commit(t *testing.T) {

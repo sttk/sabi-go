@@ -12,7 +12,7 @@ type Txn[D any] struct {
 }
 
 // Run is a method to run a transaction of holding logic functions.
-func (txn Txn[D]) Run() (map[string]any, Err) {
+func (txn Txn[D]) Run() Err {
 	txn.connBase.begin()
 
 	err := Ok()
@@ -34,5 +34,5 @@ func (txn Txn[D]) Run() (map[string]any, Err) {
 
 	txn.connBase.close()
 
-	return txn.connBase.innerMap, err
+	return err
 }
