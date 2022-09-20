@@ -3,7 +3,7 @@
 ####### 50 characters ###########################
 ## Prefix examples:
 #
-# feat: a new feature
+# new: a new feature
 # fix: a bug fix
 # update: a slight change
 # merge: merge pull request
