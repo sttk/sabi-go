@@ -8,4 +8,5 @@ package sabi
 // #GetConn which gets a connection to an external data access.
 type Dax interface {
 	GetConn(name string) (Conn, Err)
+	InnerMap() map[string]any
 }
