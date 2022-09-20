@@ -16,7 +16,7 @@ func TestTxn_Run(t *testing.T) {
 	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
 	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
 
-	txn := proc.NewTxn(GetAndSetDataLogic)
+	txn := proc.Txn(GetAndSetDataLogic)
 
 	err := txn.Run()
 	assert.True(t, err.IsOk())
@@ -34,7 +34,7 @@ func TestTxn_Run_failToGetConn(t *testing.T) {
 	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
 	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
 
-	txn := proc.NewTxn(GetAndSetDataLogic)
+	txn := proc.Txn(GetAndSetDataLogic)
 
 	sabi.WillFailToCreateFooConn = true
 
@@ -64,7 +64,7 @@ func TestTxn_Run_failToCommitConn(t *testing.T) {
 	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
 	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
 
-	txn := proc.NewTxn(GetAndSetDataLogic)
+	txn := proc.Txn(GetAndSetDataLogic)
 
 	sabi.WillFailToCommitFooConn = true
 

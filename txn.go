@@ -4,15 +4,13 @@
 
 package sabi
 
-// Txn is a structure type which represents a transaction.
-type Txn[D any] struct {
+type txnRunner[D any] struct {
 	logics   []func(D) Err
 	connBase *ConnBase
 	dax      D
 }
 
-// Run is a method to run a transaction of holding logic functions.
-func (txn Txn[D]) Run() Err {
+func (txn txnRunner[D]) Run() Err {
 	txn.connBase.begin()
 
 	err := Ok()

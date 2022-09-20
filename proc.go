@@ -50,8 +50,8 @@ func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
 
 // NewTxn is a method which creates a transaction having specified logic
 // functions.
-func (proc Proc[D]) NewTxn(logics ...func(dax D) Err) Txn[D] {
-	return Txn[D]{
+func (proc Proc[D]) Txn(logics ...func(dax D) Err) Runner {
+	return txnRunner[D]{
 		logics:   logics,
 		connBase: proc.connBase,
 		dax:      proc.dax,
