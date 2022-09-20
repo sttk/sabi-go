@@ -51,11 +51,11 @@ func NewBarSetDataDax(base sabi.Dax) BarSetDataDax {
 }
 
 func (dax BarSetDataDax) SetData(data string) sabi.Err {
-	_, err := dax.GetBarConn("bar")
+	conn, err := dax.GetBarConn("bar")
 	if !err.IsOk() {
 		return err
 	}
-	dax.InnerMap()["result"] = data
+	conn.Store("result", data)
 	return sabi.Ok()
 }
 
@@ -80,12 +80,15 @@ func TestProc_RunTxn(t *testing.T) {
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
 	sabi.SealGlobalConnCfgs()
 
-	proc := NewProc()
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{})
+	store := make(map[string]string)
 
-	m, err := proc.RunTxn(GetAndSetDataLogic)
+	proc := NewProc()
+	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
+
+	err := proc.RunTxn(GetAndSetDataLogic)
 	assert.True(t, err.IsOk())
-	assert.Equal(t, m["result"], "GETDATA")
+
+	assert.Equal(t, store["result"], "GETDATA")
 }
 
 func TestProc_RunTxn_failToGetConn(t *testing.T) {
@@ -95,12 +98,14 @@ func TestProc_RunTxn_failToGetConn(t *testing.T) {
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
 	sabi.SealGlobalConnCfgs()
 
+	store := make(map[string]string)
+
 	proc := NewProc()
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{})
+	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
 
 	sabi.WillFailToCreateFooConn = true
 
-	m, err := proc.RunTxn(GetAndSetDataLogic)
+	err := proc.RunTxn(GetAndSetDataLogic)
 	switch err.Reason().(type) {
 	case sabi.FailToCreateConn:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -112,7 +117,8 @@ func TestProc_RunTxn_failToGetConn(t *testing.T) {
 	default:
 		assert.Fail(t, err.Error())
 	}
-	assert.Nil(t, m["result"])
+
+	assert.Equal(t, store["result"], "")
 }
 
 func TestProc_RunTxn_failToCommitConn(t *testing.T) {
@@ -122,12 +128,14 @@ func TestProc_RunTxn_failToCommitConn(t *testing.T) {
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
 	sabi.SealGlobalConnCfgs()
 
+	store := make(map[string]string)
+
 	proc := NewProc()
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{})
+	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
 
 	sabi.WillFailToCommitFooConn = true
 
-	m, err := proc.RunTxn(GetAndSetDataLogic)
+	err := proc.RunTxn(GetAndSetDataLogic)
 	switch err.Reason().(type) {
 	case sabi.FailToCommitConn:
 		errs := err.Get("Errors").(map[string]sabi.Err)
@@ -140,5 +148,6 @@ func TestProc_RunTxn_failToCommitConn(t *testing.T) {
 	default:
 		assert.Fail(t, err.Error())
 	}
-	assert.Equal(t, m["result"], "GETDATA")
+
+	assert.Equal(t, store["result"], "GETDATA")
 }
