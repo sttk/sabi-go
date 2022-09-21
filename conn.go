@@ -11,25 +11,30 @@ import (
 type /* error reasons */ (
 	// ConnCfgIsNotFound is an error reason which indicates that a conection
 	// configuration to an external data source is not found.
+	// The field Name is a registered name of ConnCfg which is not found.
 	ConnCfgIsNotFound struct {
 		Name string
 	}
 
 	// FailToCreateConn is an error reason which indicates that it is failed
 	// to create a new connection to an external data source.
+	// The field Name is a registered name of ConnCfg which failed to create a
+	// Conn.
 	FailToCreateConn struct {
 		Name string
 	}
 
 	// FailToCommitConn is an error reason which indicates that some connections
 	// to external data sources failed to commit.
+	// Errors is a map of which keys are registered names of Conn which failed to
+	// commit and of which values are errors which hold reasons of failures.
 	FailToCommitConn struct {
 		Errors map[string]Err
 	}
 )
 
 // Conn is an interface which represents a connection to an external data
-// source and requires a methods: #Commit, #Roolback and #Close to work in a
+// source and requires methods: #Commit, #Roolback and #Close to work in a
 // transaction process.
 type Conn interface {
 	Commit() Err
@@ -37,8 +42,8 @@ type Conn interface {
 	Close()
 }
 
-// ConnCfg is an interface which requires a method: #CreateConn which creates
-// a connection to a data source with configuration parameters.
+// ConnCfg is an interface which creates a Conn to an external data source with
+// configuration parameters. This requires a method: #CreateConn to do it.
 type ConnCfg interface {
 	CreateConn() (Conn, Err)
 }
@@ -50,7 +55,7 @@ var (
 )
 
 // AddGlobalConnCfg registers a global ConnCfg with its name to make enable
-// to use ConnCfg in all processes..
+// to use ConnCfg in all transactions.
 func AddGlobalConnCfg(name string, cfg ConnCfg) {
 	globalConnCfgMutex.Lock()
 	defer globalConnCfgMutex.Unlock()
@@ -95,6 +100,8 @@ func (base *ConnBase) addLocalConnCfg(name string, cfg ConnCfg) {
 // GetConn gets a Conn which is a connection to an external data source by
 // specified name. If a Conn is not found, this method creates new one with
 // a local or global ConnCfg associated with same name.
+// If there are both local and global ConnCfg with same name, the local ConnCfg
+// is used.
 func (base *ConnBase) GetConn(name string) (Conn, Err) {
 	conn := base.connMap[name]
 	if conn != nil {
