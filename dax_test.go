@@ -43,8 +43,8 @@ func TestDax_GetXxxConn(t *testing.T) {
 	defer Clear()
 
 	base := NewConnBase()
-	base.addLocalConnCfg("foo", FooConnCfg{})
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 	base.begin()
 
 	fooDax := NewFooDax(base)

@@ -140,7 +140,7 @@ func TestNewConnBase(t *testing.T) {
 	assert.Equal(t, len(base.connMap), 0)
 }
 
-func TestConnBase_addLocalConnCfg(t *testing.T) {
+func TestConnBase_AddLocalConnCfg(t *testing.T) {
 	Clear()
 	defer Clear()
 
@@ -150,13 +150,13 @@ func TestConnBase_addLocalConnCfg(t *testing.T) {
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
 
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
 	assert.False(t, base.isLocalConnCfgSealed)
 	assert.Equal(t, len(base.localConnCfgMap), 2)
@@ -174,7 +174,7 @@ func TestConnBase_begin(t *testing.T) {
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
 
 	assert.False(t, isGlobalConnCfgSealed)
 	assert.False(t, base.isLocalConnCfgSealed)
@@ -188,7 +188,7 @@ func TestConnBase_begin(t *testing.T) {
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
 	assert.True(t, isGlobalConnCfgSealed)
 	assert.True(t, base.isLocalConnCfgSealed)
@@ -197,7 +197,7 @@ func TestConnBase_begin(t *testing.T) {
 
 	base.isLocalConnCfgSealed = false
 
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
 	assert.True(t, isGlobalConnCfgSealed)
 	assert.False(t, base.isLocalConnCfgSealed)
@@ -220,7 +220,7 @@ func TestConnBase_GetConn_withLocalConnCfg(t *testing.T) {
 		assert.Fail(t, err0.Error())
 	}
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
 
 	conn1, err1 := base.GetConn("foo")
 	assert.NotNil(t, conn1)
@@ -275,7 +275,7 @@ func TestConnBase_GetConn_localCfgIsTakenPriorityOfGlobalCfg(t *testing.T) {
 	AddGlobalConnCfg("foo", FooConnCfg{Label: "global"})
 	SealGlobalConnCfgs()
 
-	base.addLocalConnCfg("foo", FooConnCfg{Label: "local"})
+	base.AddLocalConnCfg("foo", FooConnCfg{Label: "local"})
 
 	conn, err = base.GetConn("foo")
 	assert.Equal(t, conn.(*FooConn).Label, "local")
@@ -290,7 +290,7 @@ func TestConnBase_GetConn_failToCreateConn(t *testing.T) {
 	defer func() { WillFailToCreateFooConn = false }()
 
 	base := NewConnBase()
-	base.addLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
 
 	conn, err := base.GetConn("foo")
 	assert.Nil(t, conn)
@@ -313,8 +313,8 @@ func TestConnBase_commit(t *testing.T) {
 
 	base := NewConnBase()
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 	base.begin()
 
 	fooConn, fooErr := base.GetConn("foo")
@@ -344,8 +344,8 @@ func TestConnBase_commit_failed(t *testing.T) {
 
 	base := NewConnBase()
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 	base.begin()
 
 	fooConn, fooErr := base.GetConn("foo")
@@ -378,8 +378,8 @@ func TestConnBase_rollback(t *testing.T) {
 
 	base := NewConnBase()
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 	base.begin()
 
 	fooConn, fooErr := base.GetConn("foo")
@@ -408,8 +408,8 @@ func TestConnBase_close(t *testing.T) {
 
 	base := NewConnBase()
 
-	base.addLocalConnCfg("foo", FooConnCfg{})
-	base.addLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalConnCfg("bar", &BarConnCfg{})
 	base.begin()
 
 	fooConn, fooErr := base.GetConn("foo")
