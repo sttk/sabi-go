@@ -88,7 +88,9 @@ func NewConnBase() *ConnBase {
 	}
 }
 
-func (base *ConnBase) addLocalConnCfg(name string, cfg ConnCfg) {
+// AddLocalConnCfg is a method which registers a local ConnCfg with a specified
+// name.
+func (base *ConnBase) AddLocalConnCfg(name string, cfg ConnCfg) {
 	base.connMutex.Lock()
 	defer base.connMutex.Unlock()
 

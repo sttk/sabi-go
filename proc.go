@@ -18,7 +18,7 @@ func NewProc[D any](connBase *ConnBase, dax D) Proc[D] {
 // AddLocalConnCfg is a method which registers a procedure-local ConnCfg
 // with a specified name.
 func (proc Proc[D]) AddLocalConnCfg(name string, cfg ConnCfg) {
-	proc.connBase.addLocalConnCfg(name, cfg)
+	proc.connBase.AddLocalConnCfg(name, cfg)
 }
 
 // RunTxn is a method which runs logic functions specified as arguments in a
