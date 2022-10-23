@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        gover: [1.18]
+        gover: [1.18, 1.19]
     steps:
     - uses: actions/checkout@v2
 
