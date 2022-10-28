@@ -121,6 +121,11 @@ func (base *ConnBase) GetConn(name string) (Conn, Err) {
 	base.connMutex.Lock()
 	defer base.connMutex.Unlock()
 
+	conn = base.connMap[name]
+	if conn != nil {
+		return conn, Ok()
+	}
+
 	var err Err
 	conn, err = cfg.CreateConn()
 	if !err.IsOk() {
