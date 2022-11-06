@@ -116,7 +116,7 @@ func TestSealGlobalConnCfgs(t *testing.T) {
 	assert.True(t, isGlobalConnCfgSealed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
 
-	AddGlobalConnCfg("foo", FooConnCfg{})
+	AddGlobalConnCfg("bar", BarConnCfg{})
 
 	assert.True(t, isGlobalConnCfgSealed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
