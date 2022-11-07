@@ -23,11 +23,38 @@ Moreover, by separating as layers, applications using this framework can change 
 <a name="usage"></a>
 ## Usage
 
-### Write logic
+1. [Write logics with a dax interface](#write_logic)
+2. [Write dax implementations](#write_dax)
+3. [Write mapping of a dax interface and dax implementations](#write_mapping)
+4. [Write execution of a procedure](#write_procedure)
 
-### Write dax
+<a name="write_logic"></a>
+### Write logics with a dax interface
 
-### Write procedure
+```
+  type MyDax interface {
+    GetData() (Data, sabi.Err)
+    SetData(data Data) sabi.Err
+  }
+
+  func MyLogic(dax Dax) sabi.Err {
+    data, err := dax.GetData()
+    if !err.IsOk() {
+      return err
+    }
+    return dax.SetData(data)
+  }
+```
+
+<a name="write_dax"></a>
+### Write dax implementations
+
+<a name="write_mapping"></a>
+### Write mapping of a dax interface and dax implementations
+
+<a name="write_procedure"></a>
+### Write execution of a procedure
+
 
 <a name="support-go-versions"></a>
 ## Supporting Go versions
@@ -36,8 +63,8 @@ This framework supports Go 1.18 or later.
 
 ### Actually checked Go versions:
 
-- 1.19.1
-- 1.18.6
+- 1.19.3
+- 1.18.8
 
 <a name="license"></a>
 ## License
