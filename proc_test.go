@@ -78,7 +78,7 @@ func TestProc_RunTxn(t *testing.T) {
 	defer sabi.Clear()
 
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
-	sabi.SealGlobalConnCfgs()
+	sabi.FixGlobalConnCfgs()
 
 	store := make(map[string]string)
 
@@ -96,7 +96,7 @@ func TestProc_RunTxn_failToGetConn(t *testing.T) {
 	defer sabi.Clear()
 
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
-	sabi.SealGlobalConnCfgs()
+	sabi.FixGlobalConnCfgs()
 
 	store := make(map[string]string)
 
@@ -126,7 +126,7 @@ func TestProc_RunTxn_failToCommitConn(t *testing.T) {
 	defer sabi.Clear()
 
 	sabi.AddGlobalConnCfg("foo", sabi.FooConnCfg{})
-	sabi.SealGlobalConnCfgs()
+	sabi.FixGlobalConnCfgs()
 
 	store := make(map[string]string)
 

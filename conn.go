@@ -49,7 +49,7 @@ type ConnCfg interface {
 }
 
 var (
-	isGlobalConnCfgSealed bool               = false
+	isGlobalConnCfgsFixed bool               = false
 	globalConnCfgMap      map[string]ConnCfg = make(map[string]ConnCfg)
 	globalConnCfgMutex    sync.Mutex
 )
@@ -60,20 +60,20 @@ func AddGlobalConnCfg(name string, cfg ConnCfg) {
 	globalConnCfgMutex.Lock()
 	defer globalConnCfgMutex.Unlock()
 
-	if !isGlobalConnCfgSealed {
+	if !isGlobalConnCfgsFixed {
 		globalConnCfgMap[name] = cfg
 	}
 }
 
-// SealGlobalConnCfgs makes unable to register any further global ConnCfg.
-func SealGlobalConnCfgs() {
-	isGlobalConnCfgSealed = true
+// FixGlobalConnCfgs makes unable to register any further global ConnCfg.
+func FixGlobalConnCfgs() {
+	isGlobalConnCfgsFixed = true
 }
 
 // ConnBase is a structure type which manages multiple Conn and ConnCfg, and
 // also work as an implementation of Dax interface.
 type ConnBase struct {
-	isLocalConnCfgSealed bool
+	isLocalConnCfgsFixed bool
 	localConnCfgMap      map[string]ConnCfg
 	connMap              map[string]Conn
 	connMutex            sync.Mutex
@@ -82,7 +82,7 @@ type ConnBase struct {
 // NewConnBase is a function which creates a new ConnBase.
 func NewConnBase() *ConnBase {
 	return &ConnBase{
-		isLocalConnCfgSealed: false,
+		isLocalConnCfgsFixed: false,
 		localConnCfgMap:      make(map[string]ConnCfg),
 		connMap:              make(map[string]Conn),
 	}
@@ -94,7 +94,7 @@ func (base *ConnBase) AddLocalConnCfg(name string, cfg ConnCfg) {
 	base.connMutex.Lock()
 	defer base.connMutex.Unlock()
 
-	if !base.isLocalConnCfgSealed {
+	if !base.isLocalConnCfgsFixed {
 		base.localConnCfgMap[name] = cfg
 	}
 }
@@ -138,8 +138,8 @@ func (base *ConnBase) GetConn(name string) (Conn, Err) {
 }
 
 func (base *ConnBase) begin() {
-	base.isLocalConnCfgSealed = true
-	isGlobalConnCfgSealed = true
+	base.isLocalConnCfgsFixed = true
+	isGlobalConnCfgsFixed = true
 }
 
 type namedErr struct {
@@ -203,5 +203,5 @@ func (base *ConnBase) close() {
 
 	wg.Wait()
 
-	base.isLocalConnCfgSealed = false
+	base.isLocalConnCfgsFixed = false
 }

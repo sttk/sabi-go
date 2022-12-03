@@ -77,9 +77,9 @@ func ExampleAddGlobalConnCfg() {
 	sabi.Clear()
 }
 
-func ExampleSealGlobalConnCfgs() {
+func ExampleFixGlobalConnCfgs() {
 	sabi.AddGlobalConnCfg("foo", FooConnCfg{})
-	sabi.SealGlobalConnCfgs()
+	sabi.FixGlobalConnCfgs()
 	sabi.AddGlobalConnCfg("bar", BarConnCfg{}) // Bad example
 
 	base := sabi.NewConnBase()
