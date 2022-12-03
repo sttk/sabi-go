@@ -22,7 +22,7 @@ func (dax BarSetterDax) SetData(data string) {
 func ExampleNewProc() {
 	sabi.AddGlobalConnCfg("foo", FooConnCfg{})
 	sabi.AddGlobalConnCfg("bar", BarConnCfg{})
-	sabi.SealGlobalConnCfgs()
+	sabi.FixGlobalConnCfgs()
 
 	base := sabi.NewConnBase()
 

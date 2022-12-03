@@ -22,7 +22,7 @@ type handlerList struct {
 var (
 	syncErrHandlers  = handlerList{nil, nil}
 	asyncErrHandlers = handlerList{nil, nil}
-	isErrCfgSealed   = false
+	isErrCfgsFixed   = false
 	errCfgMutex      = sync.Mutex{}
 )
 
@@ -32,7 +32,7 @@ func AddSyncErrHandler(handler func(Err, time.Time)) {
 	errCfgMutex.Lock()
 	defer errCfgMutex.Unlock()
 
-	if isErrCfgSealed {
+	if isErrCfgsFixed {
 		return
 	}
 
@@ -53,7 +53,7 @@ func AddAsyncErrHandler(handler func(Err, time.Time)) {
 	errCfgMutex.Lock()
 	defer errCfgMutex.Unlock()
 
-	if isErrCfgSealed {
+	if isErrCfgsFixed {
 		return
 	}
 
@@ -69,15 +69,15 @@ func AddAsyncErrHandler(handler func(Err, time.Time)) {
 	}
 }
 
-// Seals configuration for Err creation event handlers.
+// Fixes configuration for Err creation event handlers.
 // After calling this function, handlers cannot be registered any more and the
 // notification becomes effective.
-func SealErrCfgs() {
-	isErrCfgSealed = true
+func FixErrCfgs() {
+	isErrCfgsFixed = true
 }
 
 func notifyErr(err Err) {
-	if !isErrCfgSealed {
+	if !isErrCfgsFixed {
 		return
 	}
 

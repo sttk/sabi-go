@@ -15,7 +15,7 @@ func ClearErrHandlers() {
 	syncErrHandlers.last = nil
 	asyncErrHandlers.head = nil
 	asyncErrHandlers.last = nil
-	isErrCfgSealed = false
+	isErrCfgsFixed = false
 }
 
 func TestAddErrSyncHandler_oneHandler(t *testing.T) {
@@ -102,7 +102,7 @@ func TestAddErrAsyncHandler_twoHandlers(t *testing.T) {
 	assert.Equal(t, reflect.TypeOf(asyncErrHandlers.head.next.handler).String(), "func(sabi.Err, time.Time)")
 }
 
-func TestSealErrCfgs(t *testing.T) {
+func TestFixErrCfgs(t *testing.T) {
 	ClearErrHandlers()
 	defer ClearErrHandlers()
 
@@ -123,11 +123,11 @@ func TestSealErrCfgs(t *testing.T) {
 	assert.Nil(t, asyncErrHandlers.head.next)
 	assert.Nil(t, asyncErrHandlers.last.next)
 
-	assert.False(t, isErrCfgSealed)
+	assert.False(t, isErrCfgsFixed)
 
-	SealErrCfgs()
+	FixErrCfgs()
 
-	assert.True(t, isErrCfgSealed)
+	assert.True(t, isErrCfgsFixed)
 
 	AddSyncErrHandler(func(err Err, tm time.Time) {})
 	AddAsyncErrHandler(func(err Err, tm time.Time) {})
@@ -153,11 +153,11 @@ func TestNotifyErr_withNoErrHandler(t *testing.T) {
 
 	ErrBy(ReasonForNotification{})
 
-	assert.False(t, isErrCfgSealed)
+	assert.False(t, isErrCfgsFixed)
 
-	SealErrCfgs()
+	FixErrCfgs()
 
-	assert.True(t, isErrCfgSealed)
+	assert.True(t, isErrCfgsFixed)
 
 	ErrBy(ReasonForNotification{})
 }
@@ -181,16 +181,16 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 
 	ErrBy(ReasonForNotification{})
 
-	assert.False(t, isErrCfgSealed)
+	assert.False(t, isErrCfgsFixed)
 
 	assert.Equal(t, syncLogs.Len(), 0)
 	assert.Equal(t, asyncLogs.Len(), 0)
 
-	SealErrCfgs()
+	FixErrCfgs()
 
 	ErrBy(ReasonForNotification{})
 
-	assert.True(t, isErrCfgSealed)
+	assert.True(t, isErrCfgsFixed)
 
 	assert.Equal(t, syncLogs.Len(), 2)
 	assert.Equal(t, syncLogs.Front().Value, "ReasonForNotification-1")

@@ -15,7 +15,7 @@ type /* error reason */ (
 )
 
 func Clear() {
-	isGlobalConnCfgSealed = false
+	isGlobalConnCfgsFixed = false
 	globalConnCfgMap = make(map[string]ConnCfg)
 
 	logs.Init()
@@ -85,47 +85,47 @@ func TestAddGlobalConnCfg(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 0)
 
 	AddGlobalConnCfg("foo", FooConnCfg{})
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
 
 	AddGlobalConnCfg("bar", &BarConnCfg{})
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 2)
 }
 
-func TestSealGlobalConnCfgs(t *testing.T) {
+func TestFixGlobalConnCfgs(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 0)
 
 	AddGlobalConnCfg("foo", FooConnCfg{})
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
 
-	SealGlobalConnCfgs()
+	FixGlobalConnCfgs()
 
-	assert.True(t, isGlobalConnCfgSealed)
+	assert.True(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
 
 	AddGlobalConnCfg("bar", BarConnCfg{})
 
-	assert.True(t, isGlobalConnCfgSealed)
+	assert.True(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 1)
 
-	isGlobalConnCfgSealed = false
+	isGlobalConnCfgsFixed = false
 
 	AddGlobalConnCfg("bar", &BarConnCfg{})
 
-	assert.False(t, isGlobalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
 	assert.Equal(t, len(globalConnCfgMap), 2)
 }
 
@@ -135,7 +135,7 @@ func TestNewConnBase(t *testing.T) {
 
 	base := NewConnBase()
 
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
 }
@@ -146,19 +146,19 @@ func TestConnBase_AddLocalConnCfg(t *testing.T) {
 
 	base := NewConnBase()
 
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
 
 	base.AddLocalConnCfg("foo", FooConnCfg{})
 
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
 	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 2)
 	assert.Equal(t, len(base.connMap), 0)
 }
@@ -169,38 +169,38 @@ func TestConnBase_begin(t *testing.T) {
 
 	base := NewConnBase()
 
-	assert.False(t, isGlobalConnCfgSealed)
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 0)
 	assert.Equal(t, len(base.connMap), 0)
 
 	base.AddLocalConnCfg("foo", FooConnCfg{})
 
-	assert.False(t, isGlobalConnCfgSealed)
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.False(t, isGlobalConnCfgsFixed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
 	base.begin()
 
-	assert.True(t, isGlobalConnCfgSealed)
-	assert.True(t, base.isLocalConnCfgSealed)
+	assert.True(t, isGlobalConnCfgsFixed)
+	assert.True(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
 	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
-	assert.True(t, isGlobalConnCfgSealed)
-	assert.True(t, base.isLocalConnCfgSealed)
+	assert.True(t, isGlobalConnCfgsFixed)
+	assert.True(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 1)
 	assert.Equal(t, len(base.connMap), 0)
 
-	base.isLocalConnCfgSealed = false
+	base.isLocalConnCfgsFixed = false
 
 	base.AddLocalConnCfg("bar", &BarConnCfg{})
 
-	assert.True(t, isGlobalConnCfgSealed)
-	assert.False(t, base.isLocalConnCfgSealed)
+	assert.True(t, isGlobalConnCfgsFixed)
+	assert.False(t, base.isLocalConnCfgsFixed)
 	assert.Equal(t, len(base.localConnCfgMap), 2)
 	assert.Equal(t, len(base.connMap), 0)
 }
@@ -273,7 +273,7 @@ func TestConnBase_GetConn_localCfgIsTakenPriorityOfGlobalCfg(t *testing.T) {
 	}
 
 	AddGlobalConnCfg("foo", FooConnCfg{Label: "global"})
-	SealGlobalConnCfgs()
+	FixGlobalConnCfgs()
 
 	base.AddLocalConnCfg("foo", FooConnCfg{Label: "local"})
 
