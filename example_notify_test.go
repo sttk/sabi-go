@@ -10,7 +10,7 @@ func ExampleAddAsyncErrHandler() {
 	sabi.AddAsyncErrHandler(func(err sabi.Err, tm time.Time) {
 		fmt.Println("Asynchronous error handling: " + err.Error())
 	})
-	sabi.SealErrCfgs()
+	sabi.FixErrCfgs()
 
 	type FailToDoSomething struct{ Name string }
 
@@ -27,7 +27,7 @@ func ExampleAddSyncErrHandler() {
 	sabi.AddSyncErrHandler(func(err sabi.Err, tm time.Time) {
 		fmt.Println("Synchronous error handling: " + err.Error())
 	})
-	sabi.SealErrCfgs()
+	sabi.FixErrCfgs()
 
 	type FailToDoSomething struct{ Name string }
 
@@ -39,12 +39,12 @@ func ExampleAddSyncErrHandler() {
 	sabi.ClearErrHandlers()
 }
 
-func ExampleSealErrCfgs() {
+func ExampleFixErrCfgs() {
 	sabi.AddSyncErrHandler(func(err sabi.Err, tm time.Time) {
 		fmt.Println("This handler is registered")
 	})
 
-	sabi.SealErrCfgs()
+	sabi.FixErrCfgs()
 
 	sabi.AddSyncErrHandler(func(err sabi.Err, tm time.Time) { // Bad example
 		fmt.Println("This handler is not registered")
