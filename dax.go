@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type /* error reason */ (
+type /* error reasons */ (
 	// DaxSrcIsNotFound is an error reason which indicates that a specified data
 	// source instance is not found.
 	// The field Name is a registered name of a DaxSrc is not found.
@@ -16,15 +16,15 @@ type /* error reason */ (
 		Name string
 	}
 
-	// FailToCreateDaxConn is an error indicates that it failed to create a new
-	// connection to a data source.
+	// FailToCreateDaxConn is an error reason which indicates that it failed to
+	// create a new connection to a data source.
 	// The field Name is a registered name of DataSrc which failed to create a
 	// DaxConn.
 	FailToCreateDaxConn struct {
 		Name string
 	}
 
-	// FailToCommitDaxConn is an error interface which indicates that some
+	// FailToCommitDaxConn is an error reason interface which indicates that some
 	// connection failed to commit.
 	// The field Errors is a map of which keys are registered names of DaxConn
 	// which failed to commit, and of which values are Err instances holding
