@@ -7,5 +7,5 @@ package sabi
 // Dax is an interface for a set of data accesses, and requires a method:
 // #GetConn which gets a connection to an external data access.
 type Dax interface {
-	GetConn(name string) (Conn, Err)
+	GetDaxConn(name string) (DaxConn, Err)
 }

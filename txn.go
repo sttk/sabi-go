@@ -5,13 +5,13 @@
 package sabi
 
 type txnRunner[D any] struct {
-	logics   []func(D) Err
-	connBase *ConnBase
-	dax      D
+	logics  []func(D) Err
+	daxBase *DaxBase
+	dax     D
 }
 
 func (txn txnRunner[D]) Run() Err {
-	txn.connBase.begin()
+	txn.daxBase.begin()
 
 	err := Ok()
 
@@ -23,14 +23,14 @@ func (txn txnRunner[D]) Run() Err {
 	}
 
 	if err.IsOk() {
-		err = txn.connBase.commit()
+		err = txn.daxBase.commit()
 	}
 
 	if !err.IsOk() {
-		txn.connBase.rollback()
+		txn.daxBase.rollback()
 	}
 
-	txn.connBase.close()
+	txn.daxBase.close()
 
 	return err
 }

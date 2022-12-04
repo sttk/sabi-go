@@ -5,7 +5,7 @@ import (
 )
 
 func ExampleDax() {
-	base := sabi.NewConnBase()
+	base := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string

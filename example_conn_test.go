@@ -8,51 +8,62 @@ import (
 
 func unused(v interface{}) {}
 
-type FooConn struct {
+type FooDaxConn struct {
 }
 
-func (conn *FooConn) Commit() sabi.Err {
+func (conn *FooDaxConn) Commit() sabi.Err {
 	return sabi.Ok()
 }
-
-func (conn *FooConn) Rollback() {
+func (conn *FooDaxConn) Rollback() {
+}
+func (conn *FooDaxConn) Close() {
 }
 
-func (conn *FooConn) Close() {
+type FooDaxSrc struct {
 }
 
-type FooConnCfg struct {
+func (ds FooDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
+	return &FooDaxConn{}, sabi.Ok()
 }
 
-func (cfg FooConnCfg) CreateConn() (sabi.Conn, sabi.Err) {
-	return &FooConn{}, sabi.Ok()
+type BarDaxConn struct {
 }
 
-type BarConn struct {
-}
-
-func (conn *BarConn) Commit() sabi.Err {
+func (conn *BarDaxConn) Commit() sabi.Err {
 	return sabi.Ok()
 }
-
-func (conn *BarConn) Rollback() {
+func (conn *BarDaxConn) Rollback() {
+}
+func (conn *BarDaxConn) Close() {
 }
 
-func (conn *BarConn) Close() {
+type BarDaxSrc struct {
 }
 
-type BarConnCfg struct {
+func (ds BarDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
+	return &BarDaxConn{}, sabi.Ok()
 }
 
-func (cfg BarConnCfg) CreateConn() (sabi.Conn, sabi.Err) {
-	return &BarConn{}, sabi.Ok()
+type FooGetterDax struct {
+	sabi.Dax
 }
 
-func ExampleAddGlobalConnCfg() {
-	sabi.AddGlobalConnCfg("foo", FooConnCfg{})
-	sabi.AddGlobalConnCfg("bar", BarConnCfg{})
+func (dax FooGetterDax) GetData() string {
+	return "hello"
+}
 
-	base := sabi.NewConnBase()
+type BarSetterDax struct {
+	sabi.Dax
+}
+
+func (dax BarSetterDax) SetData(data string) {
+}
+
+func ExampleAddGlobalDaxSrc() {
+	sabi.AddGlobalDaxSrc("hoge", FooDaxSrc{})
+	sabi.AddGlobalDaxSrc("fuga", BarDaxSrc{})
+
+	base := sabi.NewDaxBase()
 
 	type FooBarDax struct {
 		sabi.Dax
@@ -60,29 +71,29 @@ func ExampleAddGlobalConnCfg() {
 
 	dax := FooBarDax{Dax: base}
 
-	conn, err := dax.GetConn("foo")
+	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
-	conn, err = dax.GetConn("bar")
+	conn, err = dax.GetDaxConn("fuga")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.FooConn
+	// conn = *sabi_test.FooDaxConn
 	// err.IsOk() = true
-	// conn = *sabi_test.BarConn
+	// conn = *sabi_test.BarDaxConn
 	// err.IsOk() = true
 
 	sabi.Clear()
 }
 
-func ExampleFixGlobalConnCfgs() {
-	sabi.AddGlobalConnCfg("foo", FooConnCfg{})
-	sabi.FixGlobalConnCfgs()
-	sabi.AddGlobalConnCfg("bar", BarConnCfg{}) // Bad example
+func ExampleFixGlobalDaxSrcs() {
+	sabi.AddGlobalDaxSrc("hoge", FooDaxSrc{})
+	sabi.FixGlobalDaxSrcs()
+	sabi.AddGlobalDaxSrc("fuga", BarDaxSrc{})
 
-	base := sabi.NewConnBase()
+	base := sabi.NewDaxBase()
 
 	type FooBarDax struct {
 		sabi.Dax
@@ -90,35 +101,35 @@ func ExampleFixGlobalConnCfgs() {
 
 	dax := FooBarDax{Dax: base}
 
-	conn, err := dax.GetConn("foo")
+	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
-	conn, err = dax.GetConn("bar")
+	conn, err = dax.GetDaxConn("fuga")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 	fmt.Printf("err.Error() = %v\n", err.Error())
 
 	// Output:
-	// conn = *sabi_test.FooConn
+	// conn = *sabi_test.FooDaxConn
 	// err.IsOk() = true
 	// conn = <nil>
 	// err.IsOk() = false
-	// err.Error() = {reason=ConnCfgIsNotFound, Name=bar}
+	// err.Error() = {reason=DaxSrcIsNotFound, Name=fuga}
 
 	sabi.Clear()
 }
 
-func ExampleNewConnBase() {
-	base := sabi.NewConnBase()
+func ExampleNewDaxBase() {
+	base := sabi.NewDaxBase()
 
 	// Output:
 	unused(base)
 }
 
-func ExampleConnBase_AddLocalConnCfg() {
-	base := sabi.NewConnBase()
-	base.AddLocalConnCfg("foo", FooConnCfg{})
+func ExampleDaxBase_AddLocalDaxSrc() {
+	base := sabi.NewDaxBase()
+	base.AddLocalDaxSrc("hoge", FooDaxSrc{})
 
 	type FooBarDax struct {
 		sabi.Dax
@@ -126,13 +137,14 @@ func ExampleConnBase_AddLocalConnCfg() {
 
 	dax := FooBarDax{Dax: base}
 
-	conn, err := dax.GetConn("foo")
+	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.FooConn
+	// conn = *sabi_test.FooDaxConn
 	// err.IsOk() = true
 
 	sabi.Clear()
 }
+

@@ -4,27 +4,12 @@ import (
 	"github.com/sttk-go/sabi"
 )
 
-type FooGetterDax struct {
-	sabi.Dax
-}
-
-func (dax FooGetterDax) GetData() string {
-	return "hello"
-}
-
-type BarSetterDax struct {
-	sabi.Dax
-}
-
-func (dax BarSetterDax) SetData(data string) {
-}
-
 func ExampleNewProc() {
-	sabi.AddGlobalConnCfg("foo", FooConnCfg{})
-	sabi.AddGlobalConnCfg("bar", BarConnCfg{})
-	sabi.FixGlobalConnCfgs()
+	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
+	sabi.AddGlobalDaxSrc("bar", BarDaxSrc{})
+	sabi.FixGlobalDaxSrcs()
 
-	base := sabi.NewConnBase()
+	base := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string
@@ -51,8 +36,8 @@ func ExampleNewProc() {
 	sabi.Clear()
 }
 
-func ExampleProc_AddLocalConnCfg() {
-	base := sabi.NewConnBase()
+func ExampleProc_AddLocalDaxSrc() {
+	base := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string
@@ -69,8 +54,8 @@ func ExampleProc_AddLocalConnCfg() {
 
 	proc := sabi.NewProc[MyDax](base, dax)
 
-	proc.AddLocalConnCfg("foo", FooConnCfg{})
-	proc.AddLocalConnCfg("bar", BarConnCfg{})
+	proc.AddLocalDaxSrc("foo", FooDaxSrc{})
+	proc.AddLocalDaxSrc("bar", BarDaxSrc{})
 
 	proc.RunTxn(func(dax MyDax) sabi.Err {
 		data := dax.GetData()
@@ -84,7 +69,7 @@ func ExampleProc_AddLocalConnCfg() {
 }
 
 func ExampleProc_RunTxn() {
-	base := sabi.NewConnBase()
+	base := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string
@@ -114,7 +99,7 @@ func ExampleProc_RunTxn() {
 }
 
 func ExampleProc_Txn() {
-	base := sabi.NewConnBase()
+	base := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string

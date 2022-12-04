@@ -6,25 +6,25 @@ package sabi
 
 // Proc is a structure type which represents a procedure.
 type Proc[D any] struct {
-	connBase *ConnBase
-	dax      D
+	daxBase *DaxBase
+	dax     D
 }
 
 // NewProc is a function which create a new Proc.
-func NewProc[D any](connBase *ConnBase, dax D) Proc[D] {
-	return Proc[D]{connBase: connBase, dax: dax}
+func NewProc[D any](daxBase *DaxBase, dax D) Proc[D] {
+	return Proc[D]{daxBase: daxBase, dax: dax}
 }
 
-// AddLocalConnCfg is a method which registers a procedure-local ConnCfg
+// AddLocalDaxSrc is a method which registers a procedure-local DaxSrc
 // with a specified name.
-func (proc Proc[D]) AddLocalConnCfg(name string, cfg ConnCfg) {
-	proc.connBase.AddLocalConnCfg(name, cfg)
+func (proc Proc[D]) AddLocalDaxSrc(name string, ds DaxSrc) {
+	proc.daxBase.AddLocalDaxSrc(name, ds)
 }
 
 // RunTxn is a method which runs logic functions specified as arguments in a
 // transaction.
 func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
-	proc.connBase.begin()
+	proc.daxBase.begin()
 
 	err := Ok()
 
@@ -36,14 +36,14 @@ func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
 	}
 
 	if err.IsOk() {
-		err = proc.connBase.commit()
+		err = proc.daxBase.commit()
 	}
 
 	if !err.IsOk() {
-		proc.connBase.rollback()
+		proc.daxBase.rollback()
 	}
 
-	proc.connBase.close()
+	proc.daxBase.close()
 
 	return err
 }
@@ -52,8 +52,8 @@ func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
 // functions.
 func (proc Proc[D]) Txn(logics ...func(dax D) Err) Runner {
 	return txnRunner[D]{
-		logics:   logics,
-		connBase: proc.connBase,
-		dax:      proc.dax,
+		logics:  logics,
+		daxBase: proc.daxBase,
+		dax:     proc.dax,
 	}
 }

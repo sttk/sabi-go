@@ -13,8 +13,8 @@ func TestTxn_Run(t *testing.T) {
 	store := make(map[string]string)
 
 	proc := NewProc()
-	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
+	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
 	txn := proc.Txn(GetAndSetDataLogic)
 
@@ -31,19 +31,19 @@ func TestTxn_Run_failToGetConn(t *testing.T) {
 	store := make(map[string]string)
 
 	proc := NewProc()
-	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
+	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
 	txn := proc.Txn(GetAndSetDataLogic)
 
-	sabi.WillFailToCreateFooConn = true
+	sabi.WillFailToCreateFooDaxConn = true
 
 	err := txn.Run()
 	switch err.Reason().(type) {
-	case sabi.FailToCreateConn:
+	case sabi.FailToCreateDaxConn:
 		assert.Equal(t, err.Get("Name"), "foo")
 		switch err.Cause().(sabi.Err).Reason().(type) {
-		case sabi.InvalidConn:
+		case sabi.InvalidDaxConn:
 		default:
 			assert.Fail(t, err.Error())
 		}
@@ -61,20 +61,20 @@ func TestTxn_Run_failToCommitConn(t *testing.T) {
 	store := make(map[string]string)
 
 	proc := NewProc()
-	proc.AddLocalConnCfg("foo", sabi.FooConnCfg{})
-	proc.AddLocalConnCfg("bar", &sabi.BarConnCfg{Store: store})
+	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
 	txn := proc.Txn(GetAndSetDataLogic)
 
-	sabi.WillFailToCommitFooConn = true
+	sabi.WillFailToCommitFooDaxConn = true
 
 	err := txn.Run()
 	switch err.Reason().(type) {
-	case sabi.FailToCommitConn:
+	case sabi.FailToCommitDaxConn:
 		errs := err.Get("Errors").(map[string]sabi.Err)
 		assert.Equal(t, len(errs), 1)
 		switch errs["foo"].Reason().(type) {
-		case sabi.InvalidConn:
+		case sabi.InvalidDaxConn:
 		default:
 			assert.Fail(t, err.Error())
 		}

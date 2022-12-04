@@ -4,12 +4,12 @@ import (
 	"github.com/sttk-go/sabi"
 )
 
-type AppDax interface {
+type BazDax interface {
 	GetData() string
 	SetData(data string)
 }
 
-var base = sabi.NewConnBase()
+var base = sabi.NewDaxBase()
 
 var dax = struct {
 	FooGetterDax
@@ -20,9 +20,9 @@ var dax = struct {
 }
 
 func ExamplePara() {
-	proc := sabi.NewProc[AppDax](base, dax)
-	txn1 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
-	txn2 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
+	proc := sabi.NewProc[BazDax](base, dax)
+	txn1 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
+	txn2 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
 
 	paraRunner := sabi.Para(txn1, txn2)
 
@@ -35,9 +35,9 @@ func ExamplePara() {
 }
 
 func ExampleSeq() {
-	proc := sabi.NewProc[AppDax](base, dax)
-	txn1 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
-	txn2 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
+	proc := sabi.NewProc[BazDax](base, dax)
+	txn1 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
+	txn2 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
 
 	seqRunner := sabi.Seq(txn1, txn2)
 
@@ -50,9 +50,9 @@ func ExampleSeq() {
 }
 
 func ExampleRunPara() {
-	proc := sabi.NewProc[AppDax](base, dax)
-	txn1 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
-	txn2 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
+	proc := sabi.NewProc[BazDax](base, dax)
+	txn1 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
+	txn2 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
 
 	err := sabi.RunPara(txn1, txn2)
 
@@ -63,9 +63,9 @@ func ExampleRunPara() {
 }
 
 func ExampleRunSeq() {
-	proc := sabi.NewProc[AppDax](base, dax)
-	txn1 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
-	txn2 := proc.Txn(func(dax AppDax) sabi.Err { /* ... */ return sabi.Ok() })
+	proc := sabi.NewProc[BazDax](base, dax)
+	txn1 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
+	txn2 := proc.Txn(func(dax BazDax) sabi.Err { /* ... */ return sabi.Ok() })
 
 	err := sabi.RunSeq(txn1, txn2)
 

@@ -7,298 +7,302 @@ import (
 )
 
 var logs list.List
-var WillFailToCreateFooConn bool = false
-var WillFailToCommitFooConn bool = false
+var WillFailToCreateFooDaxConn bool = false
+var WillFailToCommitFooDaxConn bool = false
 
 type /* error reason */ (
-	InvalidConn struct{}
+	InvalidDaxConn struct{}
 )
 
 func Clear() {
-	isGlobalConnCfgsFixed = false
-	globalConnCfgMap = make(map[string]ConnCfg)
+	isGlobalDaxSrcsFixed = false
+	globalDaxSrcMap = make(map[string]DaxSrc)
 
 	logs.Init()
 
-	WillFailToCreateFooConn = false
-	WillFailToCommitFooConn = false
+	WillFailToCreateFooDaxConn = false
+	WillFailToCommitFooDaxConn = false
 }
 
-type FooConn struct {
+type FooDaxConn struct {
 	Label string
 }
 
-func (conn *FooConn) Commit() Err {
-	if WillFailToCommitFooConn {
-		return ErrBy(InvalidConn{})
+func (conn *FooDaxConn) Commit() Err {
+	if WillFailToCommitFooDaxConn {
+		return ErrBy(InvalidDaxConn{})
 	}
-	logs.PushBack("FooConn#Commit")
+	logs.PushBack("FooDaxConn#Commit")
 	return Ok()
 }
-func (conn *FooConn) Rollback() {
-	logs.PushBack("FooConn#Rollback")
-}
-func (conn *FooConn) Close() {
-	logs.PushBack("FooConn#Close")
+
+func (conn *FooDaxConn) Rollback() {
+	logs.PushBack("FooDaxConn#Rollback")
 }
 
-type FooConnCfg struct {
+func (conn *FooDaxConn) Close() {
+	logs.PushBack("FooDaxConn#Close")
+}
+
+type FooDaxSrc struct {
 	Label string
 }
 
-func (cfg FooConnCfg) CreateConn() (Conn, Err) {
-	if WillFailToCreateFooConn {
-		return nil, ErrBy(InvalidConn{})
+func (ds FooDaxSrc) CreateDaxConn() (DaxConn, Err) {
+	if WillFailToCreateFooDaxConn {
+		return nil, ErrBy(InvalidDaxConn{})
 	}
-	return &FooConn{Label: cfg.Label}, Ok()
+	return &FooDaxConn{Label: ds.Label}, Ok()
 }
 
-type BarConn struct {
+type BarDaxConn struct {
 	Label string
 	store map[string]string
 }
 
-func (conn *BarConn) Commit() Err {
-	logs.PushBack("BarConn#Commit")
+func (conn *BarDaxConn) Commit() Err {
+	logs.PushBack("BarDaxConn#Commit")
 	return Ok()
 }
-func (conn *BarConn) Rollback() {
-	logs.PushBack("BarConn#Rollback")
+
+func (conn *BarDaxConn) Rollback() {
+	logs.PushBack("BarDaxConn#Rollback")
 }
-func (conn *BarConn) Close() {
-	logs.PushBack("BarConn#Close")
+
+func (conn *BarDaxConn) Close() {
+	logs.PushBack("BarDaxConn#Close")
 }
-func (conn *BarConn) Store(name, value string) {
+
+func (conn *BarDaxConn) Store(name, value string) {
 	conn.store[name] = value
 }
 
-type BarConnCfg struct {
+type BarDaxSrc struct {
 	Label string
 	Store map[string]string
 }
 
-func (cfg BarConnCfg) CreateConn() (Conn, Err) {
-	return &BarConn{Label: cfg.Label, store: cfg.Store}, Ok()
+func (ds BarDaxSrc) CreateDaxConn() (DaxConn, Err) {
+	return &BarDaxConn{Label: ds.Label, store: ds.Store}, Ok()
 }
 
-func TestAddGlobalConnCfg(t *testing.T) {
+func TestAddGlobalDaxSrc(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 0)
 
-	AddGlobalConnCfg("foo", FooConnCfg{})
+	AddGlobalDaxSrc("foo", FooDaxSrc{})
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 1)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 
-	AddGlobalConnCfg("bar", &BarConnCfg{})
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 2)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 2)
 }
 
-func TestFixGlobalConnCfgs(t *testing.T) {
+func TestFixGlobalDaxSrcs(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 0)
 
-	AddGlobalConnCfg("foo", FooConnCfg{})
+	AddGlobalDaxSrc("foo", FooDaxSrc{})
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 1)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 
-	FixGlobalConnCfgs()
+	FixGlobalDaxSrcs()
 
-	assert.True(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 1)
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 
-	AddGlobalConnCfg("bar", BarConnCfg{})
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
 
-	assert.True(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 1)
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 
-	isGlobalConnCfgsFixed = false
+	isGlobalDaxSrcsFixed = false
 
-	AddGlobalConnCfg("bar", &BarConnCfg{})
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.Equal(t, len(globalConnCfgMap), 2)
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 2)
 }
 
-func TestNewConnBase(t *testing.T) {
+func TestNewDaxBase(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 0)
-	assert.Equal(t, len(base.connMap), 0)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 0)
+	assert.Equal(t, len(base.daxConnMap), 0)
+
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 1)
+	assert.Equal(t, len(base.daxConnMap), 0)
+
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 2)
+	assert.Equal(t, len(base.daxConnMap), 0)
 }
 
-func TestConnBase_AddLocalConnCfg(t *testing.T) {
+func TestDaxBase_begin(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 0)
-	assert.Equal(t, len(base.connMap), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 0)
+	assert.Equal(t, len(base.daxConnMap), 0)
 
-	base.AddLocalConnCfg("foo", FooConnCfg{})
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
 
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 1)
-	assert.Equal(t, len(base.connMap), 0)
-
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
-
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 2)
-	assert.Equal(t, len(base.connMap), 0)
-}
-
-func TestConnBase_begin(t *testing.T) {
-	Clear()
-	defer Clear()
-
-	base := NewConnBase()
-
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 0)
-	assert.Equal(t, len(base.connMap), 0)
-
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-
-	assert.False(t, isGlobalConnCfgsFixed)
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 1)
-	assert.Equal(t, len(base.connMap), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 1)
+	assert.Equal(t, len(base.daxConnMap), 0)
 
 	base.begin()
 
-	assert.True(t, isGlobalConnCfgsFixed)
-	assert.True(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 1)
-	assert.Equal(t, len(base.connMap), 0)
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.True(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 1)
+	assert.Equal(t, len(base.daxConnMap), 0)
 
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 
-	assert.True(t, isGlobalConnCfgsFixed)
-	assert.True(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 1)
-	assert.Equal(t, len(base.connMap), 0)
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.True(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 1)
+	assert.Equal(t, len(base.daxConnMap), 0)
 
-	base.isLocalConnCfgsFixed = false
+	base.isLocalDaxSrcsFixed = false
 
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 1)
+	assert.Equal(t, len(base.daxConnMap), 0)
 
-	assert.True(t, isGlobalConnCfgsFixed)
-	assert.False(t, base.isLocalConnCfgsFixed)
-	assert.Equal(t, len(base.localConnCfgMap), 2)
-	assert.Equal(t, len(base.connMap), 0)
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(base.localDaxSrcMap), 2)
+	assert.Equal(t, len(base.daxConnMap), 0)
 }
 
-func TestConnBase_GetConn_withLocalConnCfg(t *testing.T) {
+func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	conn0, err0 := base.GetConn("foo")
-	assert.Nil(t, conn0)
-	switch err0.Reason().(type) {
-	case ConnCfgIsNotFound:
-		assert.Equal(t, err0.Get("Name"), "foo")
-	default:
-		assert.Fail(t, err0.Error())
-	}
-
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-
-	conn1, err1 := base.GetConn("foo")
-	assert.NotNil(t, conn1)
-	assert.True(t, err1.IsOk())
-
-	conn2, err2 := base.GetConn("foo")
-	assert.Equal(t, conn2, conn1)
-	assert.True(t, err2.IsOk())
-}
-
-func TestConnBase_GetConn_withGlobalConnCfg(t *testing.T) {
-	Clear()
-	defer Clear()
-
-	base := NewConnBase()
-
-	conn0, err0 := base.GetConn("foo")
-	assert.Nil(t, conn0)
-	switch err0.Reason().(type) {
-	case ConnCfgIsNotFound:
-		assert.Equal(t, err0.Get("Name"), "foo")
-	default:
-		assert.Fail(t, err0.Error())
-	}
-
-	AddGlobalConnCfg("foo", FooConnCfg{})
-
-	conn1, err1 := base.GetConn("foo")
-	assert.NotNil(t, conn1)
-	assert.True(t, err1.IsOk())
-
-	conn2, err2 := base.GetConn("foo")
-	assert.Equal(t, conn2, conn1)
-	assert.True(t, err2.IsOk())
-}
-
-func TestConnBase_GetConn_localCfgIsTakenPriorityOfGlobalCfg(t *testing.T) {
-	Clear()
-	defer Clear()
-
-	base := NewConnBase()
-
-	conn, err := base.GetConn("foo")
+	conn, err := base.GetDaxConn("foo")
 	assert.Nil(t, conn)
 	switch err.Reason().(type) {
-	case ConnCfgIsNotFound:
+	case DaxSrcIsNotFound:
 		assert.Equal(t, err.Get("Name"), "foo")
 	default:
 		assert.Fail(t, err.Error())
 	}
 
-	AddGlobalConnCfg("foo", FooConnCfg{Label: "global"})
-	FixGlobalConnCfgs()
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
 
-	base.AddLocalConnCfg("foo", FooConnCfg{Label: "local"})
+	conn, err = base.GetDaxConn("foo")
+	assert.NotNil(t, conn)
+	assert.True(t, err.IsOk())
 
-	conn, err = base.GetConn("foo")
-	assert.Equal(t, conn.(*FooConn).Label, "local")
+	var conn2 DaxConn
+	conn2, err = base.GetDaxConn("foo")
+	assert.Equal(t, conn2, conn)
 	assert.True(t, err.IsOk())
 }
 
-func TestConnBase_GetConn_failToCreateConn(t *testing.T) {
+func TestDaxBase_GetDaxConn_withGlobalDaxSrc(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	WillFailToCreateFooConn = true
-	defer func() { WillFailToCreateFooConn = false }()
+	base := NewDaxBase()
 
-	base := NewConnBase()
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-
-	conn, err := base.GetConn("foo")
+	conn, err := base.GetDaxConn("foo")
 	assert.Nil(t, conn)
 	switch err.Reason().(type) {
-	case FailToCreateConn:
+	case DaxSrcIsNotFound:
+		assert.Equal(t, err.Get("Name"), "foo")
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	AddGlobalDaxSrc("foo", FooDaxSrc{})
+
+	conn, err = base.GetDaxConn("foo")
+	assert.NotNil(t, conn)
+	assert.True(t, err.IsOk())
+
+	var conn2 DaxConn
+	conn2, err = base.GetDaxConn("foo")
+	assert.Equal(t, conn2, conn)
+	assert.True(t, err.IsOk())
+}
+
+func TestDaxBase_GetDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
+	Clear()
+	defer Clear()
+
+	base := NewDaxBase()
+
+	conn, err := base.GetDaxConn("foo")
+	assert.Nil(t, conn)
+	switch err.Reason().(type) {
+	case DaxSrcIsNotFound:
+		assert.Equal(t, err.Get("Name"), "foo")
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	AddGlobalDaxSrc("foo", FooDaxSrc{Label: "global"})
+	FixGlobalDaxSrcs()
+
+	base.AddLocalDaxSrc("foo", FooDaxSrc{Label: "local"})
+
+	conn, err = base.GetDaxConn("foo")
+	assert.Equal(t, conn.(*FooDaxConn).Label, "local")
+	assert.True(t, err.IsOk())
+}
+
+func TestDaxBase_GetDaxConn_failToCreateDaxConn(t *testing.T) {
+	Clear()
+	defer Clear()
+
+	WillFailToCreateFooDaxConn = true
+	defer func() { WillFailToCreateFooDaxConn = false }()
+
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+
+	conn, err := base.GetDaxConn("foo")
+	assert.Nil(t, conn)
+	switch err.Reason().(type) {
+	case FailToCreateDaxConn:
 		assert.Equal(t, err.Get("Name"), "foo")
 		switch err.Cause().(Err).Reason().(type) {
-		case InvalidConn:
+		case InvalidDaxConn:
 		default:
 			assert.Fail(t, err.Error())
 		}
@@ -307,21 +311,21 @@ func TestConnBase_GetConn_failToCreateConn(t *testing.T) {
 	}
 }
 
-func TestConnBase_commit(t *testing.T) {
+func TestDaxBase_commit(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
-	fooConn, fooErr := base.GetConn("foo")
+	fooConn, fooErr := base.GetDaxConn("foo")
 	assert.NotNil(t, fooConn)
 	assert.True(t, fooErr.IsOk())
 
-	barConn, barErr := base.GetConn("bar")
+	barConn, barErr := base.GetDaxConn("bar")
 	assert.NotNil(t, barConn)
 	assert.True(t, barErr.IsOk())
 
@@ -329,105 +333,107 @@ func TestConnBase_commit(t *testing.T) {
 	assert.True(t, err.IsOk())
 
 	assert.Equal(t, logs.Len(), 2)
-	if logs.Front().Value == "FooConn#Commit" {
-		assert.Equal(t, logs.Front().Value, "FooConn#Commit")
-		assert.Equal(t, logs.Back().Value, "BarConn#Commit")
+	if logs.Front().Value == "FooDaxConn#Commit" {
+		assert.Equal(t, logs.Front().Value, "FooDaxConn#Commit")
+		assert.Equal(t, logs.Back().Value, "BarDaxConn#Commit")
 	} else {
-		assert.Equal(t, logs.Front().Value, "BarConn#Commit")
-		assert.Equal(t, logs.Back().Value, "FooConn#Commit")
+		assert.Equal(t, logs.Front().Value, "BarDaxConn#Commit")
+		assert.Equal(t, logs.Back().Value, "FooDaxConn#Commit")
 	}
 }
 
-func TestConnBase_commit_failed(t *testing.T) {
+func TestDaxBase_commit_failed(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+
 	base.begin()
 
-	fooConn, fooErr := base.GetConn("foo")
+	fooConn, fooErr := base.GetDaxConn("foo")
 	assert.NotNil(t, fooConn)
 	assert.True(t, fooErr.IsOk())
 
-	barConn, barErr := base.GetConn("bar")
+	barConn, barErr := base.GetDaxConn("bar")
 	assert.NotNil(t, barConn)
 	assert.True(t, barErr.IsOk())
 
-	WillFailToCommitFooConn = true
+	WillFailToCommitFooDaxConn = true
 
 	err := base.commit()
 	assert.False(t, err.IsOk())
 	switch err.Reason().(type) {
-	case FailToCommitConn:
+	case FailToCommitDaxConn:
 		m := err.Get("Errors").(map[string]Err)
-		assert.Equal(t, m["foo"].ReasonName(), "InvalidConn")
+		assert.Equal(t, m["foo"].ReasonName(), "InvalidDaxConn")
 	default:
 		assert.Fail(t, err.Error())
 	}
 
 	assert.Equal(t, logs.Len(), 1)
-	assert.Equal(t, logs.Back().Value, "BarConn#Commit")
+	assert.Equal(t, logs.Back().Value, "BarDaxConn#Commit")
 }
 
-func TestConnBase_rollback(t *testing.T) {
+func TestDaxBase_rollback(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
-	fooConn, fooErr := base.GetConn("foo")
+	fooConn, fooErr := base.GetDaxConn("foo")
 	assert.NotNil(t, fooConn)
 	assert.True(t, fooErr.IsOk())
 
-	barConn, barErr := base.GetConn("bar")
+	barConn, barErr := base.GetDaxConn("bar")
 	assert.NotNil(t, barConn)
 	assert.True(t, barErr.IsOk())
 
 	base.rollback()
 
 	assert.Equal(t, logs.Len(), 2)
-	if logs.Front().Value == "FooConn#Rollback" {
-		assert.Equal(t, logs.Front().Value, "FooConn#Rollback")
-		assert.Equal(t, logs.Back().Value, "BarConn#Rollback")
+	if logs.Front().Value == "FooDaxConn#Rollback" {
+		assert.Equal(t, logs.Front().Value, "FooDaxConn#Rollback")
+		assert.Equal(t, logs.Back().Value, "BarDaxConn#Rollback")
 	} else {
-		assert.Equal(t, logs.Front().Value, "BarConn#Rollback")
-		assert.Equal(t, logs.Back().Value, "FooConn#Rollback")
+		assert.Equal(t, logs.Front().Value, "BarDaxConn#Rollback")
+		assert.Equal(t, logs.Back().Value, "FooDaxConn#Rollback")
 	}
 }
 
-func TestConnBase_close(t *testing.T) {
+func TestDaxBase_close(t *testing.T) {
 	Clear()
 	defer Clear()
 
-	base := NewConnBase()
+	base := NewDaxBase()
 
-	base.AddLocalConnCfg("foo", FooConnCfg{})
-	base.AddLocalConnCfg("bar", &BarConnCfg{})
+	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
-	fooConn, fooErr := base.GetConn("foo")
+	fooConn, fooErr := base.GetDaxConn("foo")
 	assert.NotNil(t, fooConn)
 	assert.True(t, fooErr.IsOk())
 
-	barConn, barErr := base.GetConn("bar")
+	barConn, barErr := base.GetDaxConn("bar")
 	assert.NotNil(t, barConn)
 	assert.True(t, barErr.IsOk())
 
 	base.close()
 
 	assert.Equal(t, logs.Len(), 2)
-	if logs.Front().Value == "FooConn#Close" {
-		assert.Equal(t, logs.Front().Value, "FooConn#Close")
-		assert.Equal(t, logs.Back().Value, "BarConn#Close")
+	if logs.Front().Value == "FooDaxConn#Close" {
+		assert.Equal(t, logs.Front().Value, "FooDaxConn#Close")
+		assert.Equal(t, logs.Back().Value, "BarDaxConn#Close")
 	} else {
-		assert.Equal(t, logs.Front().Value, "BarConn#Close")
-		assert.Equal(t, logs.Back().Value, "FooConn#Close")
+		assert.Equal(t, logs.Front().Value, "BarDaxConn#Close")
+		assert.Equal(t, logs.Back().Value, "FooDaxConn#Close")
 	}
 }
+
