@@ -57,3 +57,34 @@ func (proc Proc[D]) Txn(logics ...func(dax D) Err) Runner {
 		dax:     proc.dax,
 	}
 }
+
+type txnRunner[D any] struct {
+	logics  []func(D) Err
+	daxBase *DaxBase
+	dax     D
+}
+
+func (txn txnRunner[D]) Run() Err {
+	txn.daxBase.begin()
+
+	err := Ok()
+
+	for _, logic := range txn.logics {
+		err = logic(txn.dax)
+		if !err.IsOk() {
+			break
+		}
+	}
+
+	if err.IsOk() {
+		err = txn.daxBase.commit()
+	}
+
+	if !err.IsOk() {
+		txn.daxBase.rollback()
+	}
+
+	txn.daxBase.close()
+
+	return err
+}
