@@ -3,7 +3,6 @@
 A small framework for Golang applications.
 
 - [What is this?](#what-is-this)
-- [Usage](#usage)
 - [Supporting Go versions](#support-go-versions)
 - [License](#license)
 
@@ -19,42 +18,6 @@ Therefore, a program consists of logics, data accesses and data.
 This package is an application framework which explicitly separates procedures into logics and data accesses as layers.
 By using this framework, we can remove codes for data accesses from logic parts, and write only specific codes for each data source (e.g. database, messaging services files, and so on)  in data access  parts. 
 Moreover, by separating as layers, applications using this framework can change data sources easily by switching data access parts.
-
-<a name="usage"></a>
-## Usage
-
-1. [Write logics with a dax interface](#write_logic)
-2. [Write dax implementations](#write_dax)
-3. [Write mapping of a dax interface and dax implementations](#write_mapping)
-4. [Write execution of a procedure](#write_procedure)
-
-<a name="write_logic"></a>
-### Write logics with a dax interface
-
-```
-  type MyDax interface {
-    GetData() (Data, sabi.Err)
-    SetData(data Data) sabi.Err
-  }
-
-  func MyLogic(dax Dax) sabi.Err {
-    data, err := dax.GetData()
-    if !err.IsOk() {
-      return err
-    }
-    return dax.SetData(data)
-  }
-```
-
-<a name="write_dax"></a>
-### Write dax implementations
-
-<a name="write_mapping"></a>
-### Write mapping of a dax interface and dax implementations
-
-<a name="write_procedure"></a>
-### Write execution of a procedure
-
 
 <a name="support-go-versions"></a>
 ## Supporting Go versions
