@@ -18,14 +18,14 @@ type /* error reasons */ (
 
 	// FailToCreateDaxConn is an error reason which indicates that it failed to
 	// create a new connection to a data source.
-	// The field Name is a registered name of DataSrc which failed to create a
+	// The field Name is a registered name of a DaxSrc which failed to create a
 	// DaxConn.
 	FailToCreateDaxConn struct {
 		Name string
 	}
 
 	// FailToCommitDaxConn is an error reason interface which indicates that some
-	// connection failed to commit.
+	// connections failed to commit.
 	// The field Errors is a map of which keys are registered names of DaxConn
 	// which failed to commit, and of which values are Err instances holding
 	// their error reasons.
@@ -73,13 +73,13 @@ func AddGlobalDaxSrc(name string, ds DaxSrc) {
 	}
 }
 
-// FixGlobalDaxSrc makes unable to register any further global DaxSrc.
+// FixGlobalDaxSrcs makes unable to register any further global DaxSrc.
 func FixGlobalDaxSrcs() {
 	isGlobalDaxSrcsFixed = true
 }
 
-// DaxBase is a structure type which manages multiple DaxSrc and DaxConn, and
-// also work as an implementation of Dax interface.
+// DaxBase is a structure type which manages multiple DaxSrc and those DaxConn,
+// and also work as an implementation of Dax interface.
 type DaxBase struct {
 	isLocalDaxSrcsFixed bool
 	localDaxSrcMap      map[string]DaxSrc
@@ -108,8 +108,9 @@ func (base *DaxBase) AddLocalDaxSrc(name string, ds DaxSrc) {
 }
 
 // GetDaxConn gets a DaxConn which is a connection to a data source by
-// specified name. If a DaxConn is found, this method creates new one with a
-// local or global DaxSrc associated with same name.
+// specified name.
+// If a DaxConn is found, this method returns it, but not found, creates a new
+// one with a local or global DaxSrc associated with same name.
 // If there are both local and global DaxSrc with same name, the local DaxSrc
 // is used.
 func (base *DaxBase) GetDaxConn(name string) (DaxConn, Err) {

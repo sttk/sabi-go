@@ -9,7 +9,7 @@ import (
 )
 
 type /* error reasons */ (
-	// FailToRunInParallel is a error reason which indicates some runner which
+	// FailToRunInParallel is an error reason which indicates some runner which
 	// is runned in parallel failed.
 	FailToRunInParallel struct {
 		Errors map[string]Err
