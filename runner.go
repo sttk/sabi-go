@@ -4,15 +4,11 @@
 
 package sabi
 
-import (
-	"strconv"
-)
-
 type /* error reasons */ (
-	// FailToRunInParallel is a error reason which indicates some runner which
+	// FailToRunInParallel is an error reason which indicates some runner which
 	// is runned in parallel failed.
 	FailToRunInParallel struct {
-		Errors map[string]Err
+		Errors map[int]Err
 	}
 )
 
@@ -56,13 +52,13 @@ func (r paraRunner) Run() Err {
 		}(runner, ch)
 	}
 
-	errs := make(map[string]Err)
+	errs := make(map[int]Err)
 	n := len(r.runners)
 	for i := 0; i < n; i++ {
 		select {
 		case err := <-ch:
 			if !err.IsOk() {
-				errs[strconv.Itoa(i)] = err
+				errs[i] = err
 			}
 		}
 	}
@@ -102,13 +98,13 @@ func RunPara(runners ...Runner) Err {
 		}(runner, ch)
 	}
 
-	errs := make(map[string]Err)
+	errs := make(map[int]Err)
 	n := len(runners)
 	for i := 0; i < n; i++ {
 		select {
 		case err := <-ch:
 			if !err.IsOk() {
-				errs[strconv.Itoa(i)] = err
+				errs[i] = err
 			}
 		}
 	}

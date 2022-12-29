@@ -111,9 +111,9 @@ func TestPara_FailToRun(t *testing.T) {
 	assert.False(t, err.IsOk())
 	switch err.Reason().(type) {
 	case sabi.FailToRunInParallel:
-		errs := err.Get("Errors").(map[string]sabi.Err)
+		errs := err.Get("Errors").(map[int]sabi.Err)
 		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, errs["0"].Error(), "{reason=FailToRun, Name=r-1}")
+		assert.Equal(t, errs[0].Error(), "{reason=FailToRun, Name=r-1}")
 	default:
 		assert.Fail(t, err.Error())
 	}
@@ -196,9 +196,9 @@ func TestRunPara_FailToRun(t *testing.T) {
 	assert.False(t, err.IsOk())
 	switch err.Reason().(type) {
 	case sabi.FailToRunInParallel:
-		errs := err.Get("Errors").(map[string]sabi.Err)
+		errs := err.Get("Errors").(map[int]sabi.Err)
 		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, errs["0"].Error(), "{reason=FailToRun, Name=r-1}")
+		assert.Equal(t, errs[0].Error(), "{reason=FailToRun, Name=r-1}")
 	default:
 		assert.Fail(t, err.Error())
 	}

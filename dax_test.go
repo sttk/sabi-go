@@ -138,7 +138,7 @@ func TestFixGlobalDaxSrcs(t *testing.T) {
 	assert.Equal(t, len(globalDaxSrcMap), 2)
 }
 
-func TestNewDaxBase(t *testing.T) {
+func TestDaxBase_AddLocalDaxSrc(t *testing.T) {
 	Clear()
 	defer Clear()
 
@@ -169,13 +169,16 @@ func TestDaxBase_begin(t *testing.T) {
 
 	assert.False(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 0)
 	assert.Equal(t, len(base.localDaxSrcMap), 0)
 	assert.Equal(t, len(base.daxConnMap), 0)
 
+	AddGlobalDaxSrc("foo", FooDaxSrc{})
 	base.AddLocalDaxSrc("foo", FooDaxSrc{})
 
 	assert.False(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 	assert.Equal(t, len(base.localDaxSrcMap), 1)
 	assert.Equal(t, len(base.daxConnMap), 0)
 
@@ -183,13 +186,16 @@ func TestDaxBase_begin(t *testing.T) {
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.True(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 	assert.Equal(t, len(base.localDaxSrcMap), 1)
 	assert.Equal(t, len(base.daxConnMap), 0)
 
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
 	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.True(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 	assert.Equal(t, len(base.localDaxSrcMap), 1)
 	assert.Equal(t, len(base.daxConnMap), 0)
 
@@ -197,13 +203,32 @@ func TestDaxBase_begin(t *testing.T) {
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
 	assert.Equal(t, len(base.localDaxSrcMap), 1)
 	assert.Equal(t, len(base.daxConnMap), 0)
 
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
 	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
+	assert.Equal(t, len(base.localDaxSrcMap), 2)
+	assert.Equal(t, len(base.daxConnMap), 0)
+
+	isGlobalDaxSrcsFixed = false
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 1)
+	assert.Equal(t, len(base.localDaxSrcMap), 2)
+	assert.Equal(t, len(base.daxConnMap), 0)
+
+	AddGlobalDaxSrc("bar", &BarDaxSrc{})
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Equal(t, len(globalDaxSrcMap), 2)
 	assert.Equal(t, len(base.localDaxSrcMap), 2)
 	assert.Equal(t, len(base.daxConnMap), 0)
 }
