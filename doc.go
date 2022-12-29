@@ -29,7 +29,7 @@ For example, Greet is a logic and GreetDax is a dax interface:
     }
 
 In Greet function, there are no detail codes for getting name and putting greeting.
-In this logic function, it's only concern to convert a name to a greeting. 
+In this logic function, it's only concern to convert a name to a greeting.
 
 Dax for unit tests
 
@@ -41,7 +41,7 @@ The following code is an example which implements two methods: GetName and Say w
   }
 
   type (
-    NoName struct {}, // An error reason when getting no name. 
+    NoName struct {}, // An error reason when getting no name.
   )
 
   func (dax mapDax) GetName() (string, sabi.Err) {
