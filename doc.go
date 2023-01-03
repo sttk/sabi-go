@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Takayuki Sato. All Rights Reserved.
+// Copyright (C) 2022-2023 Takayuki Sato. All Rights Reserved.
 // This program is free software under MIT License.
 // See the file LICENSE in this distribution for more details.
 
@@ -102,7 +102,7 @@ This dax accesses to a database and provides an implementation of GetName method
 
   type (
     FailToCreateStmt struct {}
-    NoUser struct { id string }
+    NoUser struct {}
     FailToQueryUserName struct {}
   )
 
@@ -121,7 +121,7 @@ This dax accesses to a database and provides an implementation of GetName method
     err = stmt.QueryRow().Scan(&username)
     switch {
     case err == sql.ErrNoRows:
-      return "", sabi.ErrBy(NoUser{id: id})
+      return "", sabi.ErrBy(NoUser{})
     case err != nil:
       return "", sabi.ErrBy(FailToQueryUserName{})
     default:

@@ -32,7 +32,7 @@ This framework supports Go 1.18 or later.
 <a name="license"></a>
 ## License
 
-Copyright (C) 2022 Takayuki Sato
+Copyright (C) 2022-2023 Takayuki Sato
 
 This program is free software under MIT License.<br>
 See the file LICENSE in this distribution for more details.
