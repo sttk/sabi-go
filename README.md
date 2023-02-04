@@ -24,10 +24,26 @@ Moreover, by separating as layers, applications using this framework can change 
 
 This framework supports Go 1.18 or later.
 
-### Actually checked Go versions:
+### Actual test results for each Go version:
 
-- 1.19.3
-- 1.18.8
+```
+% gvm-fav
+Now using version go1.18.10
+go version go1.18.10 darwin/amd64
+ok  	github.com/sttk-go/sabi	0.834s	coverage: 99.6% of statements
+
+Now using version go1.19.5
+go version go1.19.5 darwin/amd64
+ok  	github.com/sttk-go/sabi	0.836s	coverage: 99.6% of statements
+
+Now using version go1.20
+go version go1.20 darwin/amd64
+ok  	github.com/sttk-go/sabi	0.843s	coverage: 99.6% of statements
+
+Back to go1.20
+Now using version go1.20
+%
+```
 
 <a name="license"></a>
 ## License

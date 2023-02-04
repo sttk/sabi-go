@@ -5,7 +5,7 @@
 /*
 Package github.com/sttk-go/sabi is a small framework to separate logic parts and data accesses parts for Golang applications.
 
-Logic
+# Logic
 
 A logic part is implemented as a function.
 This function takes a dax, which is an abbreviation of 'data access', as an argument.
@@ -15,161 +15,160 @@ In a logic part, these are no concern where a data comes from and a data goes to
 
 For example, Greet is a logic and GreetDax is a dax interface:
 
-    type GreetDax interface {
-      GetName() (string, sabi.Err)
-      Say(greeting string) sabi.Err
-    }
+	type GreetDax interface {
+	  GetName() (string, sabi.Err)
+	  Say(greeting string) sabi.Err
+	}
 
-    func GreetLogic(dax GreetDax) sabi.Err {
-      name, err := dax.GetName()
-      if !err.IsOk() {
-        return err
-      }
-      return dax.Say("Hello, " + name)
-    }
+	func GreetLogic(dax GreetDax) sabi.Err {
+	  name, err := dax.GetName()
+	  if !err.IsOk() {
+	    return err
+	  }
+	  return dax.Say("Hello, " + name)
+	}
 
 In Greet function, there are no detail codes for getting name and putting greeting.
 In this logic function, it's only concern to convert a name to a greeting.
 
-Dax for unit tests
+# Dax for unit tests
 
 To test a logic, the simplest dax implementation is what using a map.
 The following code is an example which implements two methods: GetName and Say which are same to GreetDax interface above.
 
-  type mapDax struct {
-    m map[string]string
-  }
+	type mapDax struct {
+	  m map[string]string
+	}
 
-  type (
-    NoName struct {}, // An error reason when getting no name.
-  )
+	type (
+	  NoName struct {}, // An error reason when getting no name.
+	)
 
-  func (dax mapDax) GetName() (string, sabi.Err) {
-    name, exists := dax.m["name"]
-    if !exists {
-      return "", sabi.ErrBy(NoName{})
-    }
-    return name, sabi.Ok()
-  }
+	func (dax mapDax) GetName() (string, sabi.Err) {
+	  name, exists := dax.m["name"]
+	  if !exists {
+	    return "", sabi.ErrBy(NoName{})
+	  }
+	  return name, sabi.Ok()
+	}
 
-  func (dax mapDax) Say(greeting string) sabi.Err {
-    dax.m["greeting"] = greeting
-    return sabi.Ok()
-  }
+	func (dax mapDax) Say(greeting string) sabi.Err {
+	  dax.m["greeting"] = greeting
+	  return sabi.Ok()
+	}
 
 And the following code is an example of a test case.
 
-  func TestGreetLogic(t *testing.T) {
-    m := make(map[string]string)
-    dax := mapDax{m: m}
+	func TestGreetLogic(t *testing.T) {
+	  m := make(map[string]string)
+	  dax := mapDax{m: m}
 
-    base := sabi.NewDaxBase()
-    proc := sabi.NewProc[GreetDax](base, dax)
+	  base := sabi.NewDaxBase()
+	  proc := sabi.NewProc[GreetDax](base, dax)
 
-    m["name"] = "World"
-    err := proc.RunTxn(GreetLogic)
-    assert.True(t, err.IsOk())
-    assert.Equal(t, m["greeting"], "Hello, World")
-  }
+	  m["name"] = "World"
+	  err := proc.RunTxn(GreetLogic)
+	  assert.True(t, err.IsOk())
+	  assert.Equal(t, m["greeting"], "Hello, World")
+	}
 
-Dax for real data access
+# Dax for real data access
 
 An actual dax ordinarily consists of multiple sub dax by input sources and output destinations.
 
 The following code is an example of a dax with no external data source.
 This dax outputs a greeting to standard output.
 
-  type SayConsoleDax struct {}
+	type SayConsoleDax struct {}
 
-  type (
-    FailToPrint struct {}
-  )
+	type (
+	  FailToPrint struct {}
+	)
 
-  func (dax SayConsoleDax) Say(text string) sabi.Err {
-    _, e := fmt.Println(text)
-    if e != nil {
-      return sabi.ErrBy(FailToPrint{}, e)
-    }
-    return sabi.Ok()
-  }
+	func (dax SayConsoleDax) Say(text string) sabi.Err {
+	  _, e := fmt.Println(text)
+	  if e != nil {
+	    return sabi.ErrBy(FailToPrint{}, e)
+	  }
+	  return sabi.Ok()
+	}
 
 And the following code is an example of a dax with an external data source.
 This dax accesses to a database and provides an implementation of GetName method of GreetDax.
 
-  type UserSqlDax struct {
-    sqldax.SqlDax
-  }
+	type UserSqlDax struct {
+	  sqldax.SqlDax
+	}
 
-  type (
-    FailToCreateStmt struct {}
-    NoUser struct {}
-    FailToQueryUserName struct {}
-  )
+	type (
+	  FailToCreateStmt struct {}
+	  NoUser struct {}
+	  FailToQueryUserName struct {}
+	)
 
-  func (dax UserSqlDax) GetName() (string, sabi.Err) {
-    conn, err := dax.GetSqlDaxConn("sql")
-    if !err.IsOk() {
-      return err
-    }
-    stmt, err := conn.Prepare("SELECT username FROM users LIMIT 1")
-    if err != nil {
-      return "", sabi.ErrBy(FailToCreateStmt{})
-    }
-    defer stmt.Close()
+	func (dax UserSqlDax) GetName() (string, sabi.Err) {
+	  conn, err := dax.GetSqlDaxConn("sql")
+	  if !err.IsOk() {
+	    return err
+	  }
+	  stmt, err := conn.Prepare("SELECT username FROM users LIMIT 1")
+	  if err != nil {
+	    return "", sabi.ErrBy(FailToCreateStmt{})
+	  }
+	  defer stmt.Close()
 
-    var username string
-    err = stmt.QueryRow().Scan(&username)
-    switch {
-    case err == sql.ErrNoRows:
-      return "", sabi.ErrBy(NoUser{})
-    case err != nil:
-      return "", sabi.ErrBy(FailToQueryUserName{})
-    default:
-      return username, sabi.Ok()
-    }
-  }
+	  var username string
+	  err = stmt.QueryRow().Scan(&username)
+	  switch {
+	  case err == sql.ErrNoRows:
+	    return "", sabi.ErrBy(NoUser{})
+	  case err != nil:
+	    return "", sabi.ErrBy(FailToQueryUserName{})
+	  default:
+	    return username, sabi.Ok()
+	  }
+	}
 
-Mapping dax interface and implementations
+# Mapping dax interface and implementations
 
 A dax interface can be related to multiple dax implementations.
 
 In the following code, GetName method of GreetDax interface is corresponded to the same named method of UserSqlDax, and Say method of GreetDax interface is corresponded to the same named method of SayConsoleDax.
 
-  func NewGreetProc() sabi.Proc[GreetDax] {
-    base := sabi.NewDaxBase()
+	func NewGreetProc() sabi.Proc[GreetDax] {
+	  base := sabi.NewDaxBase()
 
-    dax := struct {
-      UserSqlDax
-      SayConsoleDax
-    } {
-      UserSqlDax: UserSqlDax{SqlDax: sqldax.NewSqlDax(base)},
-      SayConsoleDax: SayConsoleDax{},
-    }
+	  dax := struct {
+	    UserSqlDax
+	    SayConsoleDax
+	  } {
+	    UserSqlDax: UserSqlDax{SqlDax: sqldax.NewSqlDax(base)},
+	    SayConsoleDax: SayConsoleDax{},
+	  }
 
-    return sabi.NewProc[GreetDax](base, dax)
-  }
+	  return sabi.NewProc[GreetDax](base, dax)
+	}
 
-Executing logic
+# Executing logic
 
 The following code implements a main function which execute a GreetLogic.
 GreetLogic is executed in a transaction process by GreetProc#RunTxn, so the database update can be rollbacked when an error is occured.
 
 The init function registers a SqlDaxSrc which creates a DaxConn which connects to a database. The SqlDaxConn is registerd with a name "sql" and is obtained by GetSqlDaxConn("sql") in UserSqlDax#GetName.
 
-  func init() {
-    sabi.AddGlobalDaxSrc("sql", sqldax.SqlDaxSrc{driver: "driver-name", dsn: "ds-name"})
-    sabi.FixGlobalDaxSrcs()
-  }
+	func init() {
+	  sabi.AddGlobalDaxSrc("sql", sqldax.SqlDaxSrc{driver: "driver-name", dsn: "ds-name"})
+	  sabi.FixGlobalDaxSrcs()
+	}
 
-  func main() {
-    proc := NewGreetProc()
-    err := proc.RunTxn(GreetLogic)
-    switch err.Reason().(type) {
-    default:
-      os.Exit(1)
-    case sabi.NoError:
-    }
-  }
-
+	func main() {
+	  proc := NewGreetProc()
+	  err := proc.RunTxn(GreetLogic)
+	  switch err.Reason().(type) {
+	  default:
+	    os.Exit(1)
+	  case sabi.NoError:
+	  }
+	}
 */
 package sabi
