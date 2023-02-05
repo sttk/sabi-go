@@ -30,7 +30,7 @@ type MyRunner struct {
 func (r MyRunner) Run() sabi.Err {
 	time.Sleep(r.Wait)
 	if r.Name == errorRunnerName {
-		return sabi.ErrBy(FailToRun{Name: r.Name})
+		return sabi.NewErr(FailToRun{Name: r.Name})
 	}
 	logs.PushBack(r.Name)
 	return sabi.Ok()

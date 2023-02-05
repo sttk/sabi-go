@@ -17,22 +17,22 @@ type /* error reason */ (
 func _err_unused(v interface{}) {
 }
 
-func BenchmarkErr_ErrBy_empty(b *testing.B) {
+func BenchmarkErr_NewErr_empty(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := sabi.ErrBy(ReasonForBenchWithNoParam{})
+		err := sabi.NewErr(ReasonForBenchWithNoParam{})
 		_err_unused(err)
 	}
 
 	b.StopTimer()
 }
 
-func BenchmarkErr_ErrBy_manyParams(b *testing.B) {
+func BenchmarkErr_NewErr_manyParams(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		err := sabi.ErrBy(ReasonForBenchWithManyParams{
+		err := sabi.NewErr(ReasonForBenchWithManyParams{
 			Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 			Param2:  "abcdefghijklmnopqrstuvwxyz",
 			Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -51,7 +51,7 @@ func BenchmarkErr_ErrBy_manyParams(b *testing.B) {
 }
 
 func ProcForBenchByVal() sabi.Err {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -66,7 +66,7 @@ func ProcForBenchByVal() sabi.Err {
 	return err
 }
 
-func BenchmarkErr_ErrBy_byValue(b *testing.B) {
+func BenchmarkErr_NewErr_byValue(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -78,7 +78,7 @@ func BenchmarkErr_ErrBy_byValue(b *testing.B) {
 }
 
 func ProcForBenchByPtr() *sabi.Err {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -93,7 +93,7 @@ func ProcForBenchByPtr() *sabi.Err {
 	return &err
 }
 
-func BenchmarkErr_ErrBy_byPtr(b *testing.B) {
+func BenchmarkErr_NewErr_byPtr(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -105,7 +105,7 @@ func BenchmarkErr_ErrBy_byPtr(b *testing.B) {
 }
 
 func BenchmarkErr_Reason_emtpy(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithNoParam{})
+	err := sabi.NewErr(ReasonForBenchWithNoParam{})
 
 	b.StartTimer()
 
@@ -118,7 +118,7 @@ func BenchmarkErr_Reason_emtpy(b *testing.B) {
 }
 
 func BenchmarkErr_Reason_manyParams(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -142,7 +142,7 @@ func BenchmarkErr_Reason_manyParams(b *testing.B) {
 }
 
 func BenchmarkErr_Reason_type_emtpy(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithNoParam{})
+	err := sabi.NewErr(ReasonForBenchWithNoParam{})
 
 	b.StartTimer()
 
@@ -156,7 +156,7 @@ func BenchmarkErr_Reason_type_emtpy(b *testing.B) {
 }
 
 func BenchmarkErr_Reason_type_manyParams(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -181,7 +181,7 @@ func BenchmarkErr_Reason_type_manyParams(b *testing.B) {
 }
 
 func BenchmarkErr_ReasonName(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -206,7 +206,7 @@ func BenchmarkErr_ReasonName(b *testing.B) {
 
 func BenchmarkErr_Cause(b *testing.B) {
 	cause := errors.New("Causal error")
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -230,7 +230,7 @@ func BenchmarkErr_Cause(b *testing.B) {
 }
 
 func BenchmarkErr_Situation(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
@@ -254,7 +254,7 @@ func BenchmarkErr_Situation(b *testing.B) {
 }
 
 func BenchmarkErr_Get(b *testing.B) {
-	err := sabi.ErrBy(ReasonForBenchWithManyParams{
+	err := sabi.NewErr(ReasonForBenchWithManyParams{
 		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		Param2:  "abcdefghijklmnopqrstuvwxyz",
 		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",

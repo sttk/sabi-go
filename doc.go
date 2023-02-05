@@ -47,7 +47,7 @@ The following code is an example which implements two methods: GetName and Say w
 	func (dax mapDax) GetName() (string, sabi.Err) {
 	  name, exists := dax.m["name"]
 	  if !exists {
-	    return "", sabi.ErrBy(NoName{})
+	    return "", sabi.NewErr(NoName{})
 	  }
 	  return name, sabi.Ok()
 	}
@@ -88,7 +88,7 @@ This dax outputs a greeting to standard output.
 	func (dax SayConsoleDax) Say(text string) sabi.Err {
 	  _, e := fmt.Println(text)
 	  if e != nil {
-	    return sabi.ErrBy(FailToPrint{}, e)
+	    return sabi.NewErr(FailToPrint{}, e)
 	  }
 	  return sabi.Ok()
 	}
@@ -113,7 +113,7 @@ This dax accesses to a database and provides an implementation of GetName method
 	  }
 	  stmt, err := conn.Prepare("SELECT username FROM users LIMIT 1")
 	  if err != nil {
-	    return "", sabi.ErrBy(FailToCreateStmt{})
+	    return "", sabi.NewErr(FailToCreateStmt{})
 	  }
 	  defer stmt.Close()
 
@@ -121,9 +121,9 @@ This dax accesses to a database and provides an implementation of GetName method
 	  err = stmt.QueryRow().Scan(&username)
 	  switch {
 	  case err == sql.ErrNoRows:
-	    return "", sabi.ErrBy(NoUser{})
+	    return "", sabi.NewErr(NoUser{})
 	  case err != nil:
-	    return "", sabi.ErrBy(FailToQueryUserName{})
+	    return "", sabi.NewErr(FailToQueryUserName{})
 	  default:
 	    return username, sabi.Ok()
 	  }

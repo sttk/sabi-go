@@ -29,9 +29,9 @@ func Ok() Err {
 	return ok
 }
 
-// ErrBy is a function which creates a new Err value with a reason and a cause.
+// NewErr is a function which creates a new Err value with a reason and a cause.
 // A reason is a structure type of which name expresses what is a reason.
-func ErrBy(reason any, cause ...error) Err {
+func NewErr(reason any, cause ...error) Err {
 	var err Err
 	err.reason = reason
 

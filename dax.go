@@ -124,7 +124,7 @@ func (base *DaxBase) GetDaxConn(name string) (DaxConn, Err) {
 		ds = globalDaxSrcMap[name]
 	}
 	if ds == nil {
-		return nil, ErrBy(DaxSrcIsNotFound{Name: name})
+		return nil, NewErr(DaxSrcIsNotFound{Name: name})
 	}
 
 	base.daxConnMutex.Lock()
@@ -138,7 +138,7 @@ func (base *DaxBase) GetDaxConn(name string) (DaxConn, Err) {
 	var err Err
 	conn, err = ds.CreateDaxConn()
 	if !err.IsOk() {
-		return nil, ErrBy(FailToCreateDaxConn{Name: name}, err)
+		return nil, NewErr(FailToCreateDaxConn{Name: name}, err)
 	}
 
 	base.daxConnMap[name] = conn
@@ -179,7 +179,7 @@ func (base *DaxBase) commit() Err {
 	}
 
 	if len(errs) > 0 {
-		return ErrBy(FailToCommitDaxConn{Errors: errs})
+		return NewErr(FailToCommitDaxConn{Errors: errs})
 	}
 
 	return Ok()
