@@ -151,7 +151,7 @@ func TestNotifyErr_withNoErrHandler(t *testing.T) {
 	ClearErrHandlers()
 	defer ClearErrHandlers()
 
-	ErrBy(ReasonForNotification{})
+	NewErr(ReasonForNotification{})
 
 	assert.False(t, isErrCfgsFixed)
 
@@ -159,7 +159,7 @@ func TestNotifyErr_withNoErrHandler(t *testing.T) {
 
 	assert.True(t, isErrCfgsFixed)
 
-	ErrBy(ReasonForNotification{})
+	NewErr(ReasonForNotification{})
 }
 
 func TestNotifyErr_withHandlers(t *testing.T) {
@@ -179,7 +179,7 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 		asyncLogs.PushBack(err.ReasonName() + "-3")
 	})
 
-	ErrBy(ReasonForNotification{})
+	NewErr(ReasonForNotification{})
 
 	assert.False(t, isErrCfgsFixed)
 
@@ -188,7 +188,7 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 
 	FixErrCfgs()
 
-	ErrBy(ReasonForNotification{})
+	NewErr(ReasonForNotification{})
 
 	assert.True(t, isErrCfgsFixed)
 

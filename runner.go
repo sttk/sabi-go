@@ -64,7 +64,7 @@ func (r paraRunner) Run() Err {
 	}
 
 	if len(errs) > 0 {
-		return ErrBy(FailToRunInParallel{Errors: errs})
+		return NewErr(FailToRunInParallel{Errors: errs})
 	}
 
 	return Ok()
@@ -110,7 +110,7 @@ func RunPara(runners ...Runner) Err {
 	}
 
 	if len(errs) > 0 {
-		return ErrBy(FailToRunInParallel{Errors: errs})
+		return NewErr(FailToRunInParallel{Errors: errs})
 	}
 
 	return Ok()

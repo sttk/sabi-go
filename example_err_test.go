@@ -6,7 +6,7 @@ import (
 	"github.com/sttk-go/sabi"
 )
 
-func ExampleErrBy() {
+func ExampleNewErr() {
 	type /* error reason */ (
 		FailToDoSomething           struct{}
 		FailToDoSomethingWithParams struct {
@@ -16,11 +16,11 @@ func ExampleErrBy() {
 	)
 
 	// (1) Creates an Err with no situation parameter.
-	err := sabi.ErrBy(FailToDoSomething{})
+	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("(1) %v\n", err)
 
 	// (2) Creates an Err with situation parameters.
-	err = sabi.ErrBy(FailToDoSomethingWithParams{
+	err = sabi.NewErr(FailToDoSomethingWithParams{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -29,11 +29,11 @@ func ExampleErrBy() {
 	cause := errors.New("Causal error")
 
 	// (3) Creates an Err with a causal error.
-	err = sabi.ErrBy(FailToDoSomething{}, cause)
+	err = sabi.NewErr(FailToDoSomething{}, cause)
 	fmt.Printf("(3) %v\n", err)
 
 	// (4) Creates an Err with situation parameters and a causal error.
-	err = sabi.ErrBy(FailToDoSomethingWithParams{
+	err = sabi.NewErr(FailToDoSomethingWithParams{
 		Param1: "ABC",
 		Param2: 123,
 	}, cause)
@@ -61,7 +61,7 @@ func ExampleErr_Cause() {
 
 	cause := errors.New("Causal error")
 
-	err := sabi.ErrBy(FailToDoSomething{}, cause)
+	err := sabi.NewErr(FailToDoSomething{}, cause)
 	fmt.Printf("%v\n", err.Cause())
 
 	// Output:
@@ -76,7 +76,7 @@ func ExampleErr_Error() {
 
 	cause := errors.New("Causal error")
 
-	err := sabi.ErrBy(FailToDoSomething{
+	err := sabi.NewErr(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	}, cause)
@@ -89,7 +89,7 @@ func ExampleErr_Error() {
 func ExampleErr_FileName() {
 	type FailToDoSomething struct{}
 
-	err := sabi.ErrBy(FailToDoSomething{})
+	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.FileName())
 
 	// Output:
@@ -102,7 +102,7 @@ func ExampleErr_Get() {
 		Param2 int
 	}
 
-	err := sabi.ErrBy(FailToDoSomething{
+	err := sabi.NewErr(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -121,7 +121,7 @@ func ExampleErr_IsOk() {
 	fmt.Printf("%v\n", err.IsOk())
 
 	type FailToDoSomething struct{}
-	err = sabi.ErrBy(FailToDoSomething{})
+	err = sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.IsOk())
 
 	// Output:
@@ -132,7 +132,7 @@ func ExampleErr_IsOk() {
 func ExampleErr_LineNumber() {
 	type FailToDoSomething struct{}
 
-	err := sabi.ErrBy(FailToDoSomething{})
+	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.LineNumber())
 
 	// Output:
@@ -144,7 +144,7 @@ func ExampleErr_Reason() {
 		Param1 string
 	}
 
-	err := sabi.ErrBy(FailToDoSomething{Param1: "value1"})
+	err := sabi.NewErr(FailToDoSomething{Param1: "value1"})
 	switch err.Reason().(type) {
 	case FailToDoSomething:
 		fmt.Println("The reason of the error is: FailToDoSomething")
@@ -152,7 +152,7 @@ func ExampleErr_Reason() {
 		fmt.Printf("The value of reason.Param1 is: %v\n", reason.Param1)
 	}
 
-	err = sabi.ErrBy(&FailToDoSomething{Param1: "value2"})
+	err = sabi.NewErr(&FailToDoSomething{Param1: "value2"})
 	switch err.Reason().(type) {
 	case *FailToDoSomething:
 		fmt.Println("The reason of the error is: *FailToDoSomething")
@@ -170,7 +170,7 @@ func ExampleErr_Reason() {
 func ExampleErr_ReasonName() {
 	type FailToDoSomething struct{}
 
-	err := sabi.ErrBy(FailToDoSomething{})
+	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonName())
 
 	// Output:
@@ -180,7 +180,7 @@ func ExampleErr_ReasonName() {
 func ExampleErr_ReasonPackage() {
 	type FailToDoSomething struct{}
 
-	err := sabi.ErrBy(FailToDoSomething{})
+	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonPackage())
 
 	// Output:
@@ -193,7 +193,7 @@ func ExampleErr_Situation() {
 		Param2 int
 	}
 
-	err := sabi.ErrBy(FailToDoSomething{
+	err := sabi.NewErr(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -209,7 +209,7 @@ func ExampleErr_Unwrap() {
 	cause1 := errors.New("Causal error 1")
 	cause2 := errors.New("Causal error 2")
 
-	err := sabi.ErrBy(FailToDoSomething{}, cause1)
+	err := sabi.NewErr(FailToDoSomething{}, cause1)
 
 	fmt.Printf("err.Unwrap() = %v\n", err.Unwrap())
 	fmt.Printf("errors.Is(err, cause1) = %v\n", errors.Is(err, cause1))

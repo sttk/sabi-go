@@ -31,7 +31,7 @@ type FooDaxConn struct {
 
 func (conn *FooDaxConn) Commit() Err {
 	if WillFailToCommitFooDaxConn {
-		return ErrBy(InvalidDaxConn{})
+		return NewErr(InvalidDaxConn{})
 	}
 	logs.PushBack("FooDaxConn#Commit")
 	return Ok()
@@ -51,7 +51,7 @@ type FooDaxSrc struct {
 
 func (ds FooDaxSrc) CreateDaxConn() (DaxConn, Err) {
 	if WillFailToCreateFooDaxConn {
-		return nil, ErrBy(InvalidDaxConn{})
+		return nil, NewErr(InvalidDaxConn{})
 	}
 	return &FooDaxConn{Label: ds.Label}, Ok()
 }

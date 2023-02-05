@@ -16,8 +16,8 @@ type /* error reasons */ (
 	}
 )
 
-func TestErrBy_reasonIsValue(t *testing.T) {
-	err := sabi.ErrBy(InvalidValue{Value: "abc"})
+func TestNewErr_reasonIsValue(t *testing.T) {
+	err := sabi.NewErr(InvalidValue{Value: "abc"})
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc}")
 	assert.Equal(t, err.FileName(), "err_test.go")
@@ -45,8 +45,8 @@ func TestErrBy_reasonIsValue(t *testing.T) {
 	assert.Nil(t, err.Unwrap())
 }
 
-func TestErrBy_reasonIsPointer(t *testing.T) {
-	err := sabi.ErrBy(&InvalidValue{Value: "abc"})
+func TestNewErr_reasonIsPointer(t *testing.T) {
+	err := sabi.NewErr(&InvalidValue{Value: "abc"})
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc}")
 	assert.Equal(t, err.FileName(), "err_test.go")
@@ -74,9 +74,9 @@ func TestErrBy_reasonIsPointer(t *testing.T) {
 	assert.Nil(t, err.Unwrap())
 }
 
-func TestErrBy_withCause(t *testing.T) {
+func TestNewErr_withCause(t *testing.T) {
 	cause := errors.New("def")
-	err := sabi.ErrBy(InvalidValue{Value: "abc"}, cause)
+	err := sabi.NewErr(InvalidValue{Value: "abc"}, cause)
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc, cause=def}")
 	assert.Equal(t, err.FileName(), "err_test.go")
@@ -104,9 +104,9 @@ func TestErrBy_withCause(t *testing.T) {
 	assert.Equal(t, errors.Unwrap(err), cause)
 }
 
-func TestErrBy_causeIsAlsoErr(t *testing.T) {
-	cause := sabi.ErrBy(FailToGetValue{Name: "foo"})
-	err := sabi.ErrBy(InvalidValue{Value: "abc"}, cause)
+func TestNewErr_causeIsAlsoErr(t *testing.T) {
+	cause := sabi.NewErr(FailToGetValue{Name: "foo"})
+	err := sabi.NewErr(InvalidValue{Value: "abc"}, cause)
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc, cause={reason=FailToGetValue, Name=foo}}")
 	assert.Equal(t, err.FileName(), "err_test.go")
