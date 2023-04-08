@@ -10,48 +10,52 @@ import (
 
 type /* error reasons */ (
 	// DaxSrcIsNotFound is an error reason which indicates that a specified data
-	// source instance is not found.
-	// The field Name is a registered name of a DaxSrc is not found.
+	// source is not found.
+	// The field: Name is a registered name of a DaxSrc not found.
 	DaxSrcIsNotFound struct {
 		Name string
 	}
 
 	// FailToCreateDaxConn is an error reason which indicates that it failed to
-	// create a new connection to a data source.
-	// The field Name is a registered name of a DaxSrc which failed to create a
+	// create a new connection to a data store.
+	// The field: Name is a registered name of a DaxSrc which failed to create a
 	// DaxConn.
 	FailToCreateDaxConn struct {
 		Name string
 	}
 
-	// FailToCommitDaxConn is an error reason interface which indicates that some
+	// FailToCommitDaxConn is an error reason which indicates that some
 	// connections failed to commit.
-	// The field Errors is a map of which keys are registered names of DaxConn
-	// which failed to commit, and of which values are Err instances holding
-	// their error reasons.
+	// The field: Errors is a map of which keys are the registered names of
+	// DaxConn which failed to commit, and of which values are Err having their
+	// error reasons.
 	FailToCommitDaxConn struct {
 		Errors map[string]Err
 	}
 )
 
-// DaxConn is an interface which represents a connection to a data source, and
-// requires methods: #Commit, #Rollback and #Close to work in a tranaction
-// process.
+// DaxConn is an interface which represents a connection to a data store, and
+// defines methods: Commit, Rollback and Close to work in a tranaction process.
 type DaxConn interface {
 	Commit() Err
 	Rollback()
 	Close()
 }
 
-// DaxSrc is an interface which represents a data source like database, etc.,
-// and creates a DaxConn to the data source.
-// This requires a method: #CreateDaxConn to do so.
+// DaxSrc is an interface which represents a data connection source for a data
+// store like database, etc., and creates a DaxConn which is a connection to a
+// data store.
+// This interface defines a method: CreateDaxConn to creates a DaxConn instance
+// and returns its pointer.
 type DaxSrc interface {
 	CreateDaxConn() (DaxConn, Err)
 }
 
-// Dax is an interface for a set of data accesses, and requires a method:
-// #GetDaxConn which gets a connection to an external data access.
+// Dax is an interface for a set of data access methods.
+// This interface defines a method: GetDaxConn which provides a pointer of
+// a DaxConn instance used for data accesses.
+// The argument of GetDaxConn is the name of the DaxConn and it is same with
+// the registered name of the DaxSrc which created the DaxConn.
 type Dax interface {
 	GetDaxConn(name string) (DaxConn, Err)
 }
@@ -64,6 +68,8 @@ var (
 
 // AddGlobalDaxSrc registers a global DaxSrc with its name to make enable to
 // use DaxSrc in all transactions.
+// This method ignores to add any more global DaxSrc(s) after calling
+// FixGlobalDaxSrcs function.
 func AddGlobalDaxSrc(name string, ds DaxSrc) {
 	globalDaxSrcMutex.Lock()
 	defer globalDaxSrcMutex.Unlock()
