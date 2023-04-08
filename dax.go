@@ -68,14 +68,19 @@ var (
 
 // AddGlobalDaxSrc registers a global DaxSrc with its name to make enable to
 // use DaxSrc in all transactions.
-// This method ignores to add any more global DaxSrc(s) after calling
-// FixGlobalDaxSrcs function.
+// This method ignores to add a global DaxSrc when its name is already
+// registered.
+// In addition, this method ignores to add any more global DaxSrc(s) after
+// calling FixGlobalDaxSrcs function.
 func AddGlobalDaxSrc(name string, ds DaxSrc) {
 	globalDaxSrcMutex.Lock()
 	defer globalDaxSrcMutex.Unlock()
 
 	if !isGlobalDaxSrcsFixed {
-		globalDaxSrcMap[name] = ds
+		_, exists := globalDaxSrcMap[name]
+		if !exists {
+			globalDaxSrcMap[name] = ds
+		}
 	}
 }
 
@@ -109,7 +114,10 @@ func (base *DaxBase) AddLocalDaxSrc(name string, ds DaxSrc) {
 	defer base.daxConnMutex.Unlock()
 
 	if !base.isLocalDaxSrcsFixed {
-		base.localDaxSrcMap[name] = ds
+		_, exists := base.localDaxSrcMap[name]
+		if !exists {
+			base.localDaxSrcMap[name] = ds
+		}
 	}
 }
 
