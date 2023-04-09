@@ -52,10 +52,13 @@ type DaxSrc interface {
 }
 
 // Dax is an interface for a set of data access methods.
-// This interface defines a method: GetDaxConn which provides a pointer of
-// a DaxConn instance used for data accesses.
-// The argument of GetDaxConn is the name of the DaxConn and it is same with
-// the registered name of the DaxSrc which created the DaxConn.
+// This interface defines a method: GetDaxConn.
+// This method gets a DaxConn which is a connection to a data source by
+// specified name.
+// If a DaxConn is found, this method returns it, but not found, creates a new
+// one with a local or global DaxSrc associated with same name.
+// If there are both local and global DaxSrc with same name, the local DaxSrc
+// is used.
 type Dax interface {
 	GetDaxConn(name string) (DaxConn, Err)
 }
@@ -89,27 +92,46 @@ func FixGlobalDaxSrcs() {
 	isGlobalDaxSrcsFixed = true
 }
 
-// DaxBase is a structure type which manages multiple DaxSrc and those DaxConn,
-// and also work as an implementation of Dax interface.
-type DaxBase struct {
+// DaxBase is an interface which works as a front of an implementation as a
+// base of data sources, and defines methods: AddLocalDaxSrc and
+// RemoveLocalDaxSrc.
+//
+// AddLocalDaxSrc method registered a DaxSrc with a name in this
+// implementation, but  ignores to add a local DaxSrc when its name is already
+// registered.
+// In addition, this method ignores to add any more local DaxSrc(s) while
+// the transaction is processing.
+//
+// This interface inherits Dax interface, so this has GetDaxConn method, too.
+// Also this has unexported methods for a transaction process.
+type DaxBase interface {
+	Dax
+	AddLocalDaxSrc(name string, ds DaxSrc)
+	RemoveLocalDaxSrc(name string)
+	begin()
+	commit() Err
+	rollback()
+	end()
+}
+
+type daxBaseImpl struct {
 	isLocalDaxSrcsFixed bool
 	localDaxSrcMap      map[string]DaxSrc
 	daxConnMap          map[string]DaxConn
 	daxConnMutex        sync.Mutex
 }
 
-// NewDaxBase is a function which creates a new DaxBase.
-func NewDaxBase() *DaxBase {
-	return &DaxBase{
+// NewDaxBase is a function which creates a new DaxBase instance and returns
+// its pointer.
+func NewDaxBase() DaxBase {
+	return &daxBaseImpl{
 		isLocalDaxSrcsFixed: false,
 		localDaxSrcMap:      make(map[string]DaxSrc),
 		daxConnMap:          make(map[string]DaxConn),
 	}
 }
 
-// AddLocalDaxSrc is a method which registers a local DaxSrc with a specified
-// name.
-func (base *DaxBase) AddLocalDaxSrc(name string, ds DaxSrc) {
+func (base *daxBaseImpl) AddLocalDaxSrc(name string, ds DaxSrc) {
 	base.daxConnMutex.Lock()
 	defer base.daxConnMutex.Unlock()
 
@@ -121,13 +143,16 @@ func (base *DaxBase) AddLocalDaxSrc(name string, ds DaxSrc) {
 	}
 }
 
-// GetDaxConn gets a DaxConn which is a connection to a data source by
-// specified name.
-// If a DaxConn is found, this method returns it, but not found, creates a new
-// one with a local or global DaxSrc associated with same name.
-// If there are both local and global DaxSrc with same name, the local DaxSrc
-// is used.
-func (base *DaxBase) GetDaxConn(name string) (DaxConn, Err) {
+func (base *daxBaseImpl) RemoveLocalDaxSrc(name string) {
+	base.daxConnMutex.Lock()
+	defer base.daxConnMutex.Unlock()
+
+	if !base.isLocalDaxSrcsFixed {
+		delete(base.localDaxSrcMap, name)
+	}
+}
+
+func (base *daxBaseImpl) GetDaxConn(name string) (DaxConn, Err) {
 	conn := base.daxConnMap[name]
 	if conn != nil {
 		return conn, Ok()
@@ -160,7 +185,7 @@ func (base *DaxBase) GetDaxConn(name string) (DaxConn, Err) {
 	return conn, Ok()
 }
 
-func (base *DaxBase) begin() {
+func (base *daxBaseImpl) begin() {
 	base.isLocalDaxSrcsFixed = true
 	isGlobalDaxSrcsFixed = true
 }
@@ -170,7 +195,7 @@ type namedErr struct {
 	err  Err
 }
 
-func (base *DaxBase) commit() Err {
+func (base *daxBaseImpl) commit() Err {
 	ch := make(chan namedErr)
 
 	for name, conn := range base.daxConnMap {
@@ -199,7 +224,7 @@ func (base *DaxBase) commit() Err {
 	return Ok()
 }
 
-func (base *DaxBase) rollback() {
+func (base *daxBaseImpl) rollback() {
 	var wg sync.WaitGroup
 	wg.Add(len(base.daxConnMap))
 
@@ -213,7 +238,7 @@ func (base *DaxBase) rollback() {
 	wg.Wait()
 }
 
-func (base *DaxBase) close() {
+func (base *daxBaseImpl) end() {
 	var wg sync.WaitGroup
 	wg.Add(len(base.daxConnMap))
 
@@ -223,6 +248,8 @@ func (base *DaxBase) close() {
 			conn.Close()
 		}(conn)
 	}
+
+	base.daxConnMap = make(map[string]DaxConn)
 
 	wg.Wait()
 
