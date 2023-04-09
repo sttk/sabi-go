@@ -149,23 +149,24 @@ func ExampleDaxBase_AddLocalDaxSrc() {
 }
 
 func ExampleDax() {
-	base := sabi.NewDaxBase()
+	base0 := sabi.NewDaxBase()
 
 	type MyDax interface {
 		GetData() string
 		SetData(data string)
 	}
 
-	dax := struct {
+	base := struct {
+		sabi.DaxBase
 		FooGetterDax
 		BarSetterDax
 	}{
-		FooGetterDax: FooGetterDax{Dax: base},
-		BarSetterDax: BarSetterDax{Dax: base},
+		DaxBase:      base0,
+		FooGetterDax: FooGetterDax{Dax: base0},
+		BarSetterDax: BarSetterDax{Dax: base0},
 	}
 
-	proc := sabi.NewProc[MyDax](base, dax)
-	proc.RunTxn(func(dax MyDax) sabi.Err {
+	sabi.RunTxn(base, func(dax MyDax) sabi.Err {
 		data := dax.GetData()
 		dax.SetData(data)
 		return sabi.Ok()
