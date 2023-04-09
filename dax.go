@@ -53,7 +53,7 @@ type DaxSrc interface {
 
 // Dax is an interface for a set of data access methods.
 // This interface defines a method: GetDaxConn.
-// This method gets a DaxConn which is a connection to a data source by
+// This method gets a DaxConn which is a connection to a data store by
 // specified name.
 // If a DaxConn is found, this method returns it, but not found, creates a new
 // one with a local or global DaxSrc associated with same name.
@@ -93,14 +93,14 @@ func FixGlobalDaxSrcs() {
 }
 
 // DaxBase is an interface which works as a front of an implementation as a
-// base of data sources, and defines methods: AddLocalDaxSrc and
+// base of data connection sources, and defines methods: AddLocalDaxSrc and
 // RemoveLocalDaxSrc.
 //
 // AddLocalDaxSrc method registered a DaxSrc with a name in this
 // implementation, but  ignores to add a local DaxSrc when its name is already
 // registered.
-// In addition, this method ignores to add any more local DaxSrc(s) while
-// the transaction is processing.
+// In addition, this method ignores to add local DaxSrc(s) while the
+// transaction is processing.
 //
 // This interface inherits Dax interface, so this has GetDaxConn method, too.
 // Also this has unexported methods for a transaction process.
@@ -121,8 +121,7 @@ type daxBaseImpl struct {
 	daxConnMutex        sync.Mutex
 }
 
-// NewDaxBase is a function which creates a new DaxBase instance and returns
-// its pointer.
+// NewDaxBase is a function which creates a new DaxBase.
 func NewDaxBase() DaxBase {
 	return &daxBaseImpl{
 		isLocalDaxSrcsFixed: false,
