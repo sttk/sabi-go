@@ -6,12 +6,12 @@ package sabi
 
 // Proc is a structure type which represents a procedure.
 type Proc[D any] struct {
-	daxBase *DaxBase
+	daxBase DaxBase
 	dax     D
 }
 
 // NewProc is a function which create a new Proc.
-func NewProc[D any](daxBase *DaxBase, dax D) Proc[D] {
+func NewProc[D any](daxBase DaxBase, dax D) Proc[D] {
 	return Proc[D]{daxBase: daxBase, dax: dax}
 }
 
@@ -43,7 +43,7 @@ func (proc Proc[D]) RunTxn(logics ...func(dax D) Err) Err {
 		proc.daxBase.rollback()
 	}
 
-	proc.daxBase.close()
+	proc.daxBase.end()
 
 	return err
 }
@@ -60,7 +60,7 @@ func (proc Proc[D]) Txn(logics ...func(dax D) Err) Runner {
 
 type txnRunner[D any] struct {
 	logics  []func(D) Err
-	daxBase *DaxBase
+	daxBase DaxBase
 	dax     D
 }
 
@@ -84,7 +84,7 @@ func (txn txnRunner[D]) Run() Err {
 		txn.daxBase.rollback()
 	}
 
-	txn.daxBase.close()
+	txn.daxBase.end()
 
 	return err
 }
