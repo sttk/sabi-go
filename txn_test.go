@@ -61,19 +61,20 @@ func (dax BarSetDataDax) SetData(data string) sabi.Err {
 
 // ====== Procedure ========
 
-func NewProc() sabi.Proc[MyDax] {
+func NewDaxBase() sabi.DaxBase {
 	base := sabi.NewDaxBase()
-	dax := struct {
+	return struct {
+		sabi.DaxBase
 		FooGetDataDax
 		BarSetDataDax
 	}{
+		DaxBase:       base,
 		FooGetDataDax: NewFooGetDataDax(base),
 		BarSetDataDax: NewBarSetDataDax(base),
 	}
-	return sabi.NewProc[MyDax](base, dax)
 }
 
-func TestProc_RunTxn(t *testing.T) {
+func TestRunTxn(t *testing.T) {
 	sabi.Clear()
 	defer sabi.Clear()
 
@@ -82,16 +83,16 @@ func TestProc_RunTxn(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
-	err := proc.RunTxn(GetAndSetDataLogic)
+	err := sabi.RunTxn(base, GetAndSetDataLogic)
 	assert.True(t, err.IsOk())
 
 	assert.Equal(t, store["result"], "GETDATA")
 }
 
-func TestProc_RunTxn_failToGetDaxConn(t *testing.T) {
+func TestRunTxn_failToGetDaxConn(t *testing.T) {
 	sabi.Clear()
 	defer sabi.Clear()
 
@@ -100,12 +101,12 @@ func TestProc_RunTxn_failToGetDaxConn(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
 	sabi.WillFailToCreateFooDaxConn = true
 
-	err := proc.RunTxn(GetAndSetDataLogic)
+	err := sabi.RunTxn(base, GetAndSetDataLogic)
 	switch err.Reason().(type) {
 	case sabi.FailToCreateDaxConn:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -130,12 +131,12 @@ func TestProc_RunTxn_failToCommitDaxConn(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
 	sabi.WillFailToCommitFooDaxConn = true
 
-	err := proc.RunTxn(GetAndSetDataLogic)
+	err := sabi.RunTxn(base, GetAndSetDataLogic)
 	switch err.Reason().(type) {
 	case sabi.FailToCommitDaxConn:
 		errs := err.Get("Errors").(map[string]sabi.Err)
@@ -158,11 +159,11 @@ func TestTxn_Run(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
-	txn := proc.Txn(GetAndSetDataLogic)
+	txn := sabi.Txn(base, GetAndSetDataLogic)
 
 	err := txn.Run()
 	assert.True(t, err.IsOk())
@@ -176,11 +177,11 @@ func TestTxn_Run_failToGetConn(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
-	txn := proc.Txn(GetAndSetDataLogic)
+	txn := sabi.Txn(base, GetAndSetDataLogic)
 
 	sabi.WillFailToCreateFooDaxConn = true
 
@@ -206,11 +207,11 @@ func TestTxn_Run_failToCommitConn(t *testing.T) {
 
 	store := make(map[string]string)
 
-	proc := NewProc()
-	proc.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	proc.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := NewDaxBase()
+	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
+	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
 
-	txn := proc.Txn(GetAndSetDataLogic)
+	txn := sabi.Txn(base, GetAndSetDataLogic)
 
 	sabi.WillFailToCommitFooDaxConn = true
 
