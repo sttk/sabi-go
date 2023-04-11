@@ -67,5 +67,3 @@ See the file LICENSE in this distribution for more details.
 [ci-url]: https://github.com/sttk-go/sabi/actions
 [mit-img]: https://img.shields.io/badge/license-MIT-green.svg
 [mit-url]: https://opensource.org/licenses/MIT
-
-[usage]: https://pkg.go.dev/github.com/sttk-go/sabi#pkg-overview
