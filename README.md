@@ -4,19 +4,18 @@ A small framework to separate logics and data accesses for Golang application.
 
 ## Concept
 
-Sabi is a small framework for Golang general-purpose application.
+Sabi is a small framework for Golang applications.
 This framework separates an application to logic parts and data access parts, and enables to implement each of them independently, then to combine them.
 
 In general, a program consists of procedures and data.
 And procedures include data accesses for operating data, and the rest of procedures are logics.
 So we can say that a program consists of logics, data accesses and data.
 
-Furthermore, we often think to separate a application to multiple layers, like controller layer, application logic layer, and database layer.
+Furthermore, we often think to separate an application to multiple layers, for example, controller layer, application logic layer, and database layer.
 The logic and data access mentioned in this framework are partially matched those layers, but are not matched in another part.
 For example, in the controller layer, there are input data and output data. (In a web application there are request data and response data, and in a command line application there are console input and output.)
 Even though all logical processes are moved into the application logic layer, it is remained to transform input data of the controller layer into input data of the application logic layer, and to transform output data of the application logic layer into the output data of the controller layer.
-Therefore, there are data accesses in that layer, too.
-The data accesses in this framework also includes those data accesses.
+The data accesses mentioned in this framework also includes those data accesses.
 
 
 ## Usage
