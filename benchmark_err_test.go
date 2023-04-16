@@ -1,296 +1,589 @@
 package sabi_test
 
 import (
-	"errors"
 	"github.com/sttk-go/sabi"
+	"strconv"
 	"testing"
 )
 
-type /* error reason */ (
-	ReasonForBenchWithNoParam    struct{}
-	ReasonForBenchWithManyParams struct {
-		Param1, Param2, Param3, Param4, Param5  string
-		Param6, Param7, Param8, Param9, Param10 int
-	}
-)
+func b_unused(v any) {}
 
-func _err_unused(v interface{}) {
+func returnNilError() error {
+	return nil
 }
-
-func BenchmarkErr_NewErr_empty(b *testing.B) {
+func BenchmarkError_nil(b *testing.B) {
+	var err error
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		err := sabi.NewErr(ReasonForBenchWithNoParam{})
-		_err_unused(err)
+		e := returnNilError()
+		err = e
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_NewErr_manyParams(b *testing.B) {
+func returnOkErr() sabi.Err {
+	return sabi.Ok()
+}
+func BenchmarkErr_ok(b *testing.B) {
+	var err sabi.Err
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		err := sabi.NewErr(ReasonForBenchWithManyParams{
-			Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-			Param2:  "abcdefghijklmnopqrstuvwxyz",
-			Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-			Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-			Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-			Param6:  1234567890,
-			Param7:  9876543210,
-			Param8:  1111111111,
-			Param9:  2222222222,
-			Param10: 3333333333,
-		})
-		_err_unused(err)
+		e := returnOkErr()
+		err = e
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func ProcForBenchByVal() sabi.Err {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-	return err
-}
-
-func BenchmarkErr_NewErr_byValue(b *testing.B) {
+func BenchmarkError_nil_isNil(b *testing.B) {
+	var err error
+	e := returnNilError()
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		err := ProcForBenchByVal()
-		_err_unused(err)
-	}
-
-	b.StopTimer()
-}
-
-func ProcForBenchByPtr() *sabi.Err {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-	return &err
-}
-
-func BenchmarkErr_NewErr_byPtr(b *testing.B) {
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		err := ProcForBenchByPtr()
-		_err_unused(err)
-	}
-
-	b.StopTimer()
-}
-
-func BenchmarkErr_Reason_emtpy(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithNoParam{})
-
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		reason := err.Reason()
-		_err_unused(reason)
-	}
-
-	b.StopTimer()
-}
-
-func BenchmarkErr_Reason_manyParams(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		reason := err.Reason()
-		_err_unused(reason)
-	}
-
-	b.StopTimer()
-}
-
-func BenchmarkErr_Reason_type_emtpy(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithNoParam{})
-
-	b.StartTimer()
-
-	for i := 0; i < b.N; i++ {
-		switch err.Reason().(type) {
-		case ReasonForBenchWithNoParam, *ReasonForBenchWithNoParam:
+		if e == nil {
+			err = e
 		}
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_Reason_type_manyParams(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-
+func BenchmarkErr_ok_isOk(b *testing.B) {
+	var err sabi.Err
+	e := returnOkErr()
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		switch err.Reason().(type) {
-		case ReasonForBenchWithManyParams, *ReasonForBenchWithManyParams:
+		if e.IsOk() {
+			err = e
 		}
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_ReasonName(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
+func BenchmarkError_nil_typeSwitch(b *testing.B) {
+	var err error
+	e := returnNilError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.(type) {
+		case nil:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_ok_typeSwitch(b *testing.B) {
+	var err sabi.Err
+	e := returnOkErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.Reason().(type) {
+		case nil:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_nil_ErrorString(b *testing.B) {
+	var str string
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := "nil"
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+func BenchmarkErr_ok_ErrorString(b *testing.B) {
+	var str string
+	e := returnOkErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+type EmptyError struct {
+}
+
+func returnEmptyError() error {
+	return EmptyError{}
+}
+func (e EmptyError) Error() string {
+	return "EmptyError"
+}
+func BenchmarkError_empty(b *testing.B) {
+	var err error
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnEmptyError()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+type EmptyReason struct {
+}
+
+func returnEmptyReasonedErr() sabi.Err {
+	return sabi.NewErr(EmptyReason{})
+}
+func BenchmarkErr_emptyReason(b *testing.B) {
+	var err sabi.Err
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnEmptyReasonedErr()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_empty_isNotNil(b *testing.B) {
+	var err error
+	e := returnEmptyError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e != nil {
+			err = e
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_emptyReason_isNotOk(b *testing.B) {
+	var err sabi.Err
+	e := returnEmptyReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if !e.IsOk() {
+			err = e
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_empty_typeSwitch(b *testing.B) {
+	var err error
+	e := returnEmptyError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.(type) {
+		case EmptyError:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_emptyReason_typeSwitch(b *testing.B) {
+	var err sabi.Err
+	e := returnEmptyReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.Reason().(type) {
+		case EmptyReason:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_empty_ErrorString(b *testing.B) {
+	var str string
+	e := returnEmptyError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+func BenchmarkErr_emptyReason_ErrorString(b *testing.B) {
+	var str string
+	e := returnEmptyReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+	b_unused(e)
+}
+
+type OneFieldError struct {
+	FieldA string
+}
+
+func (e OneFieldError) Error() string {
+	return "OneFieldError{FieldA:" + e.FieldA + "}"
+}
+func returnOneFieldError() error {
+	return OneFieldError{FieldA: "abc"}
+}
+func BenchmarkError_oneField(b *testing.B) {
+	var err error
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnOneFieldError()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+type OneFieldReason struct {
+	FieldA string
+}
+
+func returnOneFieldReasonedErr() sabi.Err {
+	return sabi.NewErr(OneFieldReason{FieldA: "abc"})
+}
+func BenchmarkErr_oneFieldReason(b *testing.B) {
+	var err sabi.Err
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnOneFieldReasonedErr()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func returnOneFieldErrorPtr() error {
+	return &OneFieldError{FieldA: "abc"}
+}
+func BenchmarkError_oneFieldPtr(b *testing.B) {
+	var err error
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnOneFieldErrorPtr()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func returnOneFieldReasonedPtrErr() sabi.Err {
+	return sabi.NewErr(&OneFieldReason{FieldA: "abc"})
+}
+func BenchmarkErr_oneFieldReasonPtr(b *testing.B) {
+	var err sabi.Err
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnOneFieldReasonedPtrErr()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_oneField_isNotNil(b *testing.B) {
+	var err error
+	e := returnOneFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e != nil {
+			err = e
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_oneFieldReason_isNotOk(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if !e.IsOk() {
+			err = e
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_oneField_typeSwitch(b *testing.B) {
+	var err error
+	e := returnOneFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.(type) {
+		case OneFieldError:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_oneFieldReason_typeSwitch(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.Reason().(type) {
+		case OneFieldReason:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_oneField_ErrorString(b *testing.B) {
+	var str string
+	e := returnOneFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+func BenchmarkErr_oneFieldReason_ErrorString(b *testing.B) {
+	var str string
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+type FiveFieldError struct {
+	FieldA string
+	FieldB int
+	FieldC bool
+	FieldD string
+	FieldE string
+}
+
+func (e FiveFieldError) Error() string {
+	return "FiveFieldError{FieldA:" + e.FieldA +
+		",FieldB:" + strconv.Itoa(e.FieldB) +
+		",FieldC:" + strconv.FormatBool(e.FieldC) +
+		",FieldD:" + e.FieldD + ",FieldE:" + e.FieldE +
+		"}"
+}
+func returnFiveFieldError() error {
+	return FiveFieldError{
+		FieldA: "abc", FieldB: 123, FieldC: true, FieldD: "def", FieldE: "ghi",
+	}
+}
+func BenchmarkError_fiveField(b *testing.B) {
+	var err error
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnFiveFieldError()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+type FiveFieldReason struct {
+	FieldA string
+	FieldB int
+	FieldC bool
+	FieldD string
+	FieldE string
+}
+
+func returnFiveFieldReasonedErr() sabi.Err {
+	return sabi.NewErr(FiveFieldReason{
+		FieldA: "abc", FieldB: 123, FieldC: true, FieldD: "def", FieldE: "ghi",
 	})
-
+}
+func BenchmarkErr_fiveFieldReason(b *testing.B) {
+	var err sabi.Err
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		name := err.ReasonName()
-		_err_unused(name)
+		e := returnFiveFieldReasonedErr()
+		err = e
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_Cause(b *testing.B) {
-	cause := errors.New("Causal error")
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	}, cause)
-
+func BenchmarkError_fiveField_isNotNil(b *testing.B) {
+	var err error
+	e := returnFiveFieldError()
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		cause := err.Cause()
-		_err_unused(cause)
+		if e != nil {
+			err = e
+		}
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_Situation(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-
+func BenchmarkErr_fiveFieldReason_isNotOk(b *testing.B) {
+	var err sabi.Err
+	e := returnFiveFieldReasonedErr()
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		m := err.Situation()
-		_err_unused(m)
+		if !e.IsOk() {
+			err = e
+		}
 	}
-
 	b.StopTimer()
+	b_unused(err)
 }
 
-func BenchmarkErr_Get(b *testing.B) {
-	err := sabi.NewErr(ReasonForBenchWithManyParams{
-		Param1:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		Param2:  "abcdefghijklmnopqrstuvwxyz",
-		Param3:  "8b91114c-f620-46bc-a991-25c7ac0f7935",
-		Param4:  "f59de3cb-b91c-4c1d-a152-787173d1ab9b",
-		Param5:  "c50c24cd-fe6f-4de7-803e-193d705376b7",
-		Param6:  1234567890,
-		Param7:  9876543210,
-		Param8:  1111111111,
-		Param9:  2222222222,
-		Param10: 3333333333,
-	})
-
+func BenchmarkError_fiveField_typeSwitch(b *testing.B) {
+	var err error
+	e := returnFiveFieldError()
 	b.StartTimer()
-
 	for i := 0; i < b.N; i++ {
-		s1 := err.Get("Param1").(string)
-		s2 := err.Get("Param2").(string)
-		s3 := err.Get("Param3").(string)
-		s4 := err.Get("Param4").(string)
-		s5 := err.Get("Param5").(string)
-		n1 := err.Get("Param6").(int)
-		n2 := err.Get("Param7").(int)
-		n3 := err.Get("Param8").(int)
-		n4 := err.Get("Param9").(int)
-		n5 := err.Get("Param10").(int)
-		_err_unused(s1)
-		_err_unused(s2)
-		_err_unused(s3)
-		_err_unused(s4)
-		_err_unused(s5)
-		_err_unused(n1)
-		_err_unused(n2)
-		_err_unused(n3)
-		_err_unused(n4)
-		_err_unused(n5)
+		switch e.(type) {
+		case FiveFieldError:
+			err = e
+		default:
+			b.Fail()
+		}
 	}
-
 	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkErr_fiveFieldReason_typeSwitch(b *testing.B) {
+	var err sabi.Err
+	e := returnFiveFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		switch e.Reason().(type) {
+		case FiveFieldReason:
+			err = e
+		default:
+			b.Fail()
+		}
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_fiveField_ErrorString(b *testing.B) {
+	var str string
+	e := returnFiveFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+func BenchmarkErr_fiveFieldReason_ErrorString(b *testing.B) {
+	var str string
+	e := returnFiveFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+type HavingCauseError struct {
+	Cause error
+}
+
+func (e HavingCauseError) Error() string {
+	return "HavingCauseError{cause:" + e.Cause.Error() + "}"
+}
+func (e HavingCauseError) Unwrap() error {
+	return e.Cause
+}
+func returnHavingCauseError() error {
+	return HavingCauseError{Cause: EmptyError{}}
+}
+func BenchmarkError_havingCause(b *testing.B) {
+	var err error
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnHavingCauseError()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+type HavingCauseReason struct {
+}
+
+func returnHavingCauseReasonedErr() sabi.Err {
+	return sabi.NewErr(HavingCauseError{}, EmptyError{})
+}
+func BenchmarkErr_havingCauseReason(b *testing.B) {
+	var err sabi.Err
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		e := returnHavingCauseReasonedErr()
+		err = e
+	}
+	b.StopTimer()
+	b_unused(err)
+}
+
+func BenchmarkError_havingCause_ErrorString(b *testing.B) {
+	var str string
+	e := returnHavingCauseError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
+}
+
+func BenchmarkErr_havingCauseReason_ErrorString(b *testing.B) {
+	var str string
+	e := returnHavingCauseReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		s := e.Error()
+		str = s
+	}
+	b.StopTimer()
+	b_unused(str)
 }

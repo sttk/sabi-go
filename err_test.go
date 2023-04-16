@@ -16,12 +16,18 @@ type /* error reasons */ (
 	}
 )
 
+type InvalidValueError struct {
+	Value string
+}
+
+func (e InvalidValueError) Error() string {
+	return "InvalidValue{Value=" + e.Value + "}"
+}
+
 func TestNewErr_reasonIsValue(t *testing.T) {
 	err := sabi.NewErr(InvalidValue{Value: "abc"})
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc}")
-	assert.Equal(t, err.FileName(), "err_test.go")
-	assert.Equal(t, err.LineNumber(), 20)
 
 	switch err.Reason().(type) {
 	case InvalidValue:
@@ -43,14 +49,20 @@ func TestNewErr_reasonIsValue(t *testing.T) {
 
 	assert.Nil(t, err.Cause())
 	assert.Nil(t, err.Unwrap())
+	assert.Nil(t, errors.Unwrap(err))
+
+	assert.True(t, errors.Is(err, err))
+	assert.True(t, errors.As(err, &err))
+
+	e := InvalidValueError{Value: "aaa"}
+	assert.False(t, errors.Is(err, e))
+	assert.False(t, errors.As(err, &e))
 }
 
 func TestNewErr_reasonIsPointer(t *testing.T) {
 	err := sabi.NewErr(&InvalidValue{Value: "abc"})
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc}")
-	assert.Equal(t, err.FileName(), "err_test.go")
-	assert.Equal(t, err.LineNumber(), 49)
 
 	switch err.Reason().(type) {
 	case *InvalidValue:
@@ -72,6 +84,14 @@ func TestNewErr_reasonIsPointer(t *testing.T) {
 
 	assert.Nil(t, err.Cause())
 	assert.Nil(t, err.Unwrap())
+	assert.Nil(t, errors.Unwrap(err))
+
+	assert.True(t, errors.Is(err, err))
+	assert.True(t, errors.As(err, &err))
+
+	e := InvalidValueError{Value: "aaa"}
+	assert.False(t, errors.Is(err, e))
+	assert.False(t, errors.As(err, &e))
 }
 
 func TestNewErr_withCause(t *testing.T) {
@@ -79,8 +99,6 @@ func TestNewErr_withCause(t *testing.T) {
 	err := sabi.NewErr(InvalidValue{Value: "abc"}, cause)
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc, cause=def}")
-	assert.Equal(t, err.FileName(), "err_test.go")
-	assert.Equal(t, err.LineNumber(), 79)
 
 	switch err.Reason().(type) {
 	case InvalidValue:
@@ -102,6 +120,16 @@ func TestNewErr_withCause(t *testing.T) {
 	assert.Equal(t, err.Cause(), cause)
 	assert.Equal(t, err.Unwrap(), cause)
 	assert.Equal(t, errors.Unwrap(err), cause)
+
+	assert.True(t, errors.Is(err, err))
+	assert.True(t, errors.As(err, &err))
+
+	assert.True(t, errors.Is(err, cause))
+	//assert.True(t, errors.As(err, cause)) --> compile error
+
+	e := InvalidValueError{Value: "aaa"}
+	assert.False(t, errors.Is(err, e))
+	assert.False(t, errors.As(err, &e))
 }
 
 func TestNewErr_causeIsAlsoErr(t *testing.T) {
@@ -109,8 +137,6 @@ func TestNewErr_causeIsAlsoErr(t *testing.T) {
 	err := sabi.NewErr(InvalidValue{Value: "abc"}, cause)
 
 	assert.Equal(t, err.Error(), "{reason=InvalidValue, Value=abc, cause={reason=FailToGetValue, Name=foo}}")
-	assert.Equal(t, err.FileName(), "err_test.go")
-	assert.Equal(t, err.LineNumber(), 109)
 
 	switch err.Reason().(type) {
 	case InvalidValue:
@@ -134,24 +160,33 @@ func TestNewErr_causeIsAlsoErr(t *testing.T) {
 	assert.Equal(t, err.Cause(), cause)
 	assert.Equal(t, err.Unwrap(), cause)
 	assert.Equal(t, errors.Unwrap(err), cause)
+
+	assert.True(t, errors.Is(err, err))
+	assert.True(t, errors.As(err, &err))
+
+	assert.True(t, errors.Is(err, cause))
+	assert.True(t, errors.As(err, &cause))
+
+	e := InvalidValueError{Value: "aaa"}
+	assert.False(t, errors.Is(err, e))
+	assert.False(t, errors.As(err, &e))
 }
 
 func TestOk(t *testing.T) {
 	err := sabi.Ok()
 
-	assert.Equal(t, err.Error(), "{reason=NoError}")
-	assert.Equal(t, err.FileName(), "")
-	assert.Equal(t, err.LineNumber(), 0)
+	assert.Equal(t, err.Error(), "{reason=nil}")
+	assert.Nil(t, err.Reason())
 
 	switch err.Reason().(type) {
-	case sabi.NoError:
+	case nil:
 	default:
 		assert.Fail(t, err.Error())
 	}
 
 	assert.True(t, err.IsOk())
-	assert.Equal(t, err.ReasonName(), "NoError")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.ReasonName(), "")
+	assert.Equal(t, err.ReasonPackage(), "")
 	assert.Nil(t, err.Get("Value"))
 	assert.Nil(t, err.Get("value"))
 	assert.Nil(t, err.Get("Name"))
@@ -161,4 +196,12 @@ func TestOk(t *testing.T) {
 
 	assert.Nil(t, err.Cause())
 	assert.Nil(t, err.Unwrap())
+	assert.Nil(t, errors.Unwrap(err))
+
+	assert.True(t, errors.Is(err, err))
+	assert.True(t, errors.As(err, &err))
+
+	e := InvalidValueError{Value: "aaa"}
+	assert.False(t, errors.Is(err, e))
+	assert.False(t, errors.As(err, &e))
 }
