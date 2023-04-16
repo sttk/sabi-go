@@ -1,16 +1,41 @@
-// Copyright (C) 2022 Takayuki Sato. All Rights Reserved.
+// Copyright (C) 2022-2023 Takayuki Sato. All Rights Reserved.
 // This program is free software under MIT License.
 // See the file LICENSE in this distribution for more details.
 
 package sabi
 
 import (
+	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
 
+// ErrOccasion is a struct which contains time and posision in a source file
+// when an Err occured.
+type ErrOccasion struct {
+	time time.Time
+	file string
+	line int
+}
+
+// Time is a method which returns time when this Err occured.
+func (e ErrOccasion) Time() time.Time {
+	return e.time
+}
+
+// File is a method which returns the file name where this Err occured.
+func (e ErrOccasion) File() string {
+	return e.file
+}
+
+// Line is a method which returns the line number where this Err occured.
+func (e ErrOccasion) Line() int {
+	return e.line
+}
+
 type handlerListElem struct {
-	handler func(Err, time.Time)
+	handler func(Err, ErrOccasion)
 	next    *handlerListElem
 }
 
@@ -28,7 +53,7 @@ var (
 
 // Adds an Err creation event handler which is executed synchronously.
 // Handlers added with this method are executed in the order of addition.
-func AddSyncErrHandler(handler func(Err, time.Time)) {
+func AddSyncErrHandler(handler func(Err, ErrOccasion)) {
 	errCfgMutex.Lock()
 	defer errCfgMutex.Unlock()
 
@@ -49,7 +74,7 @@ func AddSyncErrHandler(handler func(Err, time.Time)) {
 }
 
 // Adds a Err creation event handlers which is executed asynchronously.
-func AddAsyncErrHandler(handler func(Err, time.Time)) {
+func AddAsyncErrHandler(handler func(Err, ErrOccasion)) {
 	errCfgMutex.Lock()
 	defer errCfgMutex.Unlock()
 
@@ -85,17 +110,22 @@ func notifyErr(err Err) {
 		return
 	}
 
-	now := time.Now()
+	var occ ErrOccasion
+	occ.time = time.Now()
+
+	_, file, line, ok := runtime.Caller(2)
+	if ok {
+		occ.file = filepath.Base(file)
+		occ.line = line
+	}
 
 	for el := syncErrHandlers.head; el != nil; el = el.next {
-		el.handler(err, now)
+		el.handler(err, occ)
 	}
 
 	if asyncErrHandlers.head != nil {
-		go func() {
-			for el := asyncErrHandlers.head; el != nil; el = el.next {
-				go el.handler(err, now)
-			}
-		}()
+		for el := asyncErrHandlers.head; el != nil; el = el.next {
+			go el.handler(err, occ)
+		}
 	}
 }

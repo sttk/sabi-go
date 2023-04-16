@@ -52,7 +52,7 @@ func ExampleOk() {
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
 	// Output:
-	// err = {reason=NoError}
+	// err = {reason=nil}
 	// err.IsOk() = true
 }
 
@@ -86,16 +86,6 @@ func ExampleErr_Error() {
 	// {reason=FailToDoSomething, Param1=ABC, Param2=123, cause=Causal error}
 }
 
-func ExampleErr_FileName() {
-	type FailToDoSomething struct{}
-
-	err := sabi.NewErr(FailToDoSomething{})
-	fmt.Printf("%v\n", err.FileName())
-
-	// Output:
-	// example_err_test.go
-}
-
 func ExampleErr_Get() {
 	type FailToDoSomething struct {
 		Param1 string
@@ -127,16 +117,6 @@ func ExampleErr_IsOk() {
 	// Output:
 	// true
 	// false
-}
-
-func ExampleErr_LineNumber() {
-	type FailToDoSomething struct{}
-
-	err := sabi.NewErr(FailToDoSomething{})
-	fmt.Printf("%v\n", err.LineNumber())
-
-	// Output:
-	// 135
 }
 
 func ExampleErr_Reason() {
@@ -212,11 +192,17 @@ func ExampleErr_Unwrap() {
 	err := sabi.NewErr(FailToDoSomething{}, cause1)
 
 	fmt.Printf("err.Unwrap() = %v\n", err.Unwrap())
+	fmt.Printf("errors.Unwrap(err) = %v\n", errors.Unwrap(err))
 	fmt.Printf("errors.Is(err, cause1) = %v\n", errors.Is(err, cause1))
 	fmt.Printf("errors.Is(err, cause2) = %v\n", errors.Is(err, cause2))
+	fmt.Printf("errors.As(err, cause1) = %v\n", errors.Is(err, cause1))
+	fmt.Printf("errors.As(err, cause2) = %v\n", errors.Is(err, cause2))
 
 	// Output:
 	// err.Unwrap() = Causal error 1
+	// errors.Unwrap(err) = Causal error 1
 	// errors.Is(err, cause1) = true
 	// errors.Is(err, cause2) = false
+	// errors.As(err, cause1) = true
+	// errors.As(err, cause2) = false
 }

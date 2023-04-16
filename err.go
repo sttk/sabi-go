@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Takayuki Sato. All Rights Reserved.
+// Copyright (C) 2022-2023 Takayuki Sato. All Rights Reserved.
 // This program is free software under MIT License.
 // See the file LICENSE in this distribution for more details.
 
@@ -6,31 +6,25 @@ package sabi
 
 import (
 	"fmt"
-	"path/filepath"
 	"reflect"
-	"runtime"
 )
 
-// Err is a structure type which represents an error with a reason.
+// Err is a struct which represents an error with a reason.
 type Err struct {
 	reason any
-	file   string
-	line   int
 	cause  error
 }
 
-// NoError is an error reason which indicates no error.
-type NoError struct{}
+var ok = Err{}
 
-var ok = Err{reason: NoError{}}
-
-// Ok is a function which returns an Err value of which reason is NoError.
+// Ok is a function which returns an Err of which reason is nil.
 func Ok() Err {
 	return ok
 }
 
-// NewErr is a function which creates a new Err value with a reason and a cause.
-// A reason is a structure type of which name expresses what is a reason.
+// NewErr is a function which creates a new Err with a specified reason and
+// an optional cause.
+// A reason is a struct of which name expresses what is a reason.
 func NewErr(reason any, cause ...error) Err {
 	var err Err
 	err.reason = reason
@@ -39,34 +33,26 @@ func NewErr(reason any, cause ...error) Err {
 		err.cause = cause[0]
 	}
 
-	_, file, line, ok := runtime.Caller(1)
-	if ok {
-		err.file = filepath.Base(file)
-		err.line = line
-	}
-
 	notifyErr(err)
 
 	return err
 }
 
-// IsOk method determines whether an Err indicates no error.
+// IsOk method checks whether this Err indicates no error.
 func (err Err) IsOk() bool {
-	switch err.reason.(type) {
-	case NoError, *NoError:
-		return true
-	default:
-		return false
-	}
+	return (err.reason == nil)
 }
 
-// Reason method returns an error reason structure.
+// Reason method returns an err reaason struct.
 func (err Err) Reason() any {
 	return err.reason
 }
 
-// ReasonName method returns a name of a reason structure type.
+// ReasonName method returns a name of a reason struct type.
 func (err Err) ReasonName() string {
+	if err.reason == nil {
+		return ""
+	}
 	t := reflect.TypeOf(err.reason)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -74,8 +60,11 @@ func (err Err) ReasonName() string {
 	return t.Name()
 }
 
-// ReasonPackage method returns a package path of a reason structure type.
+// ReasonPackage method returns a package path of a reason struct type.
 func (err Err) ReasonPackage() string {
+	if err.reason == nil {
+		return ""
+	}
 	t := reflect.TypeOf(err.reason)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -83,24 +72,17 @@ func (err Err) ReasonPackage() string {
 	return t.PkgPath()
 }
 
-// FileName method returns a source file name where an Err was caused.
-func (err Err) FileName() string {
-	return err.file
-}
-
-// LineNumber method returns a line number in a source file where an Err was
-// caused.
-func (err Err) LineNumber() int {
-	return err.line
-}
-
-// Cause method returns a causal error of an Err.
+// Cause method returns a causal error of this Err.
 func (err Err) Cause() error {
 	return err.cause
 }
 
 // Error method returns a string which expresses this error.
 func (err Err) Error() string {
+	if err.reason == nil {
+		return "{reason=nil}"
+	}
+
 	v := reflect.ValueOf(err.reason)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -116,7 +98,7 @@ func (err Err) Error() string {
 
 		f := v.Field(i)
 		if f.CanInterface() {
-			s += fmt.Sprintf(", %s=%v", k, f.Interface())
+			s += ", " + k + "=" + fmt.Sprintf("%v", f.Interface())
 		}
 	}
 
@@ -128,16 +110,20 @@ func (err Err) Error() string {
 	return s
 }
 
-// Unwrap method returns an error which is wrapped by this error.
+// Unwrap method returns an error which is wrapped in this error.
 func (err Err) Unwrap() error {
 	return err.cause
 }
 
 // Get method returns a parameter value of a specified name, which is one of
-// parameters which represents situation when an Err was caused.
-// If a parameter is not found in an Err and its .cause is also an Err, this
-// method digs hierarchically to find a parameter which has same name.
+// fields of the reason struct.
+// If the specified named field is not found in this Err and this cause is
+// also Err struct, this method digs hierarchically to find the field.
 func (err Err) Get(name string) any {
+	if err.reason == nil {
+		return nil
+	}
+
 	v := reflect.ValueOf(err.reason)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -162,17 +148,19 @@ func (err Err) Get(name string) any {
 	return nil
 }
 
-// Situation method returns a map containing parameters which represent a
-// situation when an Err was caused.
-// If a .cause is an Err, a returned map includes parameters of .cause
-// hierarchically.
+// Situation method returns a map containing the field names and values of this
+// reason struct and of this cause if it is also Err struct.
 func (err Err) Situation() map[string]any {
+	var m map[string]any
+
+	if err.reason == nil {
+		return m
+	}
+
 	v := reflect.ValueOf(err.reason)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-
-	var m map[string]any
 
 	if err.cause != nil {
 		t := reflect.TypeOf(err.cause)
