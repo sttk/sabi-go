@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-type /* error reason */ (
+type /* error reasons */ (
 	InvalidValue struct {
 		Value string
 	}

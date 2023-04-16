@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleNewErr() {
-	type /* error reason */ (
+	type /* error reasons */ (
 		FailToDoSomething           struct{}
 		FailToDoSomethingWithParams struct {
 			Param1 string
