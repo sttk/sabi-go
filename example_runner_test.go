@@ -9,16 +9,23 @@ type BazDax interface {
 	SetData(data string)
 }
 
+type bazDaxImpl struct {
+}
+
+func (dax bazDaxImpl) GetData() string {
+	return ""
+}
+func (dax bazDaxImpl) SetData(data string) {
+}
+
 var base0 = sabi.NewDaxBase()
 
 var base = struct {
 	sabi.DaxBase
-	FooGetterDax
-	BarSetterDax
+	bazDaxImpl
 }{
-	DaxBase:      base0,
-	FooGetterDax: FooGetterDax{Dax: base0},
-	BarSetterDax: BarSetterDax{Dax: base0},
+	DaxBase:    base0,
+	bazDaxImpl: bazDaxImpl{},
 }
 
 func ExamplePara() {
@@ -32,7 +39,6 @@ func ExamplePara() {
 	// Output:
 
 	unused(err)
-	sabi.Clear()
 }
 
 func ExampleSeq() {
@@ -46,7 +52,6 @@ func ExampleSeq() {
 	// Output:
 
 	unused(err)
-	sabi.Clear()
 }
 
 func ExampleRunPara() {
@@ -58,7 +63,6 @@ func ExampleRunPara() {
 	// Output:
 
 	unused(err)
-	sabi.Clear()
 }
 
 func ExampleRunSeq() {
@@ -70,5 +74,4 @@ func ExampleRunSeq() {
 	// Output:
 
 	unused(err)
-	sabi.Clear()
 }

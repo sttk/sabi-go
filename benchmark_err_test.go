@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func b_unused(v any) {}
+func unused(v any) {}
 
 func returnNilError() error {
 	return nil
@@ -19,7 +19,7 @@ func BenchmarkError_nil(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func returnOkErr() sabi.Err {
@@ -33,7 +33,7 @@ func BenchmarkErr_ok(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_nil_isNil(b *testing.B) {
@@ -46,7 +46,7 @@ func BenchmarkError_nil_isNil(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_ok_isOk(b *testing.B) {
@@ -59,7 +59,7 @@ func BenchmarkErr_ok_isOk(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_nil_typeSwitch(b *testing.B) {
@@ -75,7 +75,7 @@ func BenchmarkError_nil_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_ok_typeSwitch(b *testing.B) {
@@ -91,7 +91,7 @@ func BenchmarkErr_ok_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_nil_ErrorString(b *testing.B) {
@@ -102,7 +102,7 @@ func BenchmarkError_nil_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 func BenchmarkErr_ok_ErrorString(b *testing.B) {
@@ -114,7 +114,7 @@ func BenchmarkErr_ok_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 type EmptyError struct {
@@ -134,7 +134,7 @@ func BenchmarkError_empty(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 type EmptyReason struct {
@@ -151,7 +151,7 @@ func BenchmarkErr_emptyReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_empty_isNotNil(b *testing.B) {
@@ -164,7 +164,7 @@ func BenchmarkError_empty_isNotNil(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_emptyReason_isNotOk(b *testing.B) {
@@ -177,7 +177,7 @@ func BenchmarkErr_emptyReason_isNotOk(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_empty_typeSwitch(b *testing.B) {
@@ -193,7 +193,7 @@ func BenchmarkError_empty_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_emptyReason_typeSwitch(b *testing.B) {
@@ -209,7 +209,7 @@ func BenchmarkErr_emptyReason_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_empty_ErrorString(b *testing.B) {
@@ -221,7 +221,7 @@ func BenchmarkError_empty_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 func BenchmarkErr_emptyReason_ErrorString(b *testing.B) {
@@ -233,8 +233,8 @@ func BenchmarkErr_emptyReason_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
-	b_unused(e)
+	unused(str)
+	unused(e)
 }
 
 type OneFieldError struct {
@@ -255,7 +255,7 @@ func BenchmarkError_oneField(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 type OneFieldReason struct {
@@ -273,7 +273,7 @@ func BenchmarkErr_oneFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func returnOneFieldErrorPtr() error {
@@ -287,7 +287,7 @@ func BenchmarkError_oneFieldPtr(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func returnOneFieldReasonedPtrErr() sabi.Err {
@@ -301,7 +301,7 @@ func BenchmarkErr_oneFieldReasonPtr(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_oneField_isNotNil(b *testing.B) {
@@ -314,7 +314,7 @@ func BenchmarkError_oneField_isNotNil(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_oneFieldReason_isNotOk(b *testing.B) {
@@ -327,7 +327,7 @@ func BenchmarkErr_oneFieldReason_isNotOk(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_oneField_typeSwitch(b *testing.B) {
@@ -343,7 +343,7 @@ func BenchmarkError_oneField_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_oneFieldReason_typeSwitch(b *testing.B) {
@@ -359,7 +359,7 @@ func BenchmarkErr_oneFieldReason_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_oneField_ErrorString(b *testing.B) {
@@ -371,7 +371,7 @@ func BenchmarkError_oneField_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 func BenchmarkErr_oneFieldReason_ErrorString(b *testing.B) {
@@ -383,7 +383,7 @@ func BenchmarkErr_oneFieldReason_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 type FiveFieldError struct {
@@ -414,7 +414,7 @@ func BenchmarkError_fiveField(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 type FiveFieldReason struct {
@@ -438,7 +438,7 @@ func BenchmarkErr_fiveFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_fiveField_isNotNil(b *testing.B) {
@@ -451,7 +451,7 @@ func BenchmarkError_fiveField_isNotNil(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_fiveFieldReason_isNotOk(b *testing.B) {
@@ -464,7 +464,7 @@ func BenchmarkErr_fiveFieldReason_isNotOk(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_fiveField_typeSwitch(b *testing.B) {
@@ -480,7 +480,7 @@ func BenchmarkError_fiveField_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkErr_fiveFieldReason_typeSwitch(b *testing.B) {
@@ -496,7 +496,7 @@ func BenchmarkErr_fiveFieldReason_typeSwitch(b *testing.B) {
 		}
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_fiveField_ErrorString(b *testing.B) {
@@ -508,7 +508,7 @@ func BenchmarkError_fiveField_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 func BenchmarkErr_fiveFieldReason_ErrorString(b *testing.B) {
@@ -520,7 +520,7 @@ func BenchmarkErr_fiveFieldReason_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 type HavingCauseError struct {
@@ -544,7 +544,7 @@ func BenchmarkError_havingCause(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 type HavingCauseReason struct {
@@ -561,7 +561,7 @@ func BenchmarkErr_havingCauseReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused(err)
 }
 
 func BenchmarkError_havingCause_ErrorString(b *testing.B) {
@@ -573,7 +573,7 @@ func BenchmarkError_havingCause_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }
 
 func BenchmarkErr_havingCauseReason_ErrorString(b *testing.B) {
@@ -585,5 +585,5 @@ func BenchmarkErr_havingCauseReason_ErrorString(b *testing.B) {
 		str = s
 	}
 	b.StopTimer()
-	b_unused(str)
+	unused(str)
 }

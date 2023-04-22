@@ -173,14 +173,17 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 	AddSyncErrHandler(func(err Err, occ ErrOccasion) {
 		syncLogs.PushBack(
 			err.ReasonName() + "-1:" + occ.File() + ":" + strconv.Itoa(occ.Line()))
+		occ.Time()
 	})
 	AddSyncErrHandler(func(err Err, occ ErrOccasion) {
 		syncLogs.PushBack(
 			err.ReasonName() + "-2:" + occ.File() + ":" + strconv.Itoa(occ.Line()))
+		occ.Time()
 	})
 	AddAsyncErrHandler(func(err Err, occ ErrOccasion) {
 		asyncLogs.PushBack(
 			err.ReasonName() + "-3:" + occ.File() + ":" + strconv.Itoa(occ.Line()))
+		occ.Time()
 	})
 
 	NewErr(ReasonForNotification{})
@@ -198,13 +201,13 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 
 	assert.Equal(t, syncLogs.Len(), 2)
 	assert.Equal(t, syncLogs.Front().Value,
-		"ReasonForNotification-1:notify_test.go:195")
+		"ReasonForNotification-1:notify_test.go:198")
 	assert.Equal(t, syncLogs.Front().Next().Value,
-		"ReasonForNotification-2:notify_test.go:195")
+		"ReasonForNotification-2:notify_test.go:198")
 
 	time.Sleep(100 * time.Millisecond)
 
 	assert.Equal(t, asyncLogs.Len(), 1)
 	assert.Equal(t, asyncLogs.Front().Value,
-		"ReasonForNotification-3:notify_test.go:195")
+		"ReasonForNotification-3:notify_test.go:198")
 }
