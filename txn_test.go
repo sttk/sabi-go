@@ -1,148 +1,368 @@
 package sabi_test
 
 import (
+	"container/list"
 	"github.com/stretchr/testify/assert"
 	"github.com/sttk-go/sabi"
 	"strings"
 	"testing"
 )
 
-// ====== Logic part =======
+var (
+	willFailToCreateBDaxConn = false
+	willFailToCommitBDaxConn = false
+)
 
-type MyDax interface {
-	GetData() (string, sabi.Err)
-	SetData(data string) sabi.Err
+var logs list.List
+
+type (
+	FailToCreateBDaxConn struct{}
+	FailToCommitBDaxConn struct{}
+	FailToRunLogic       struct{}
+)
+
+func clear() {
+	willFailToCreateBDaxConn = false
+	willFailToCommitBDaxConn = false
+	sabi.ClearDaxBase()
+	logs.Init()
 }
 
-func GetAndSetDataLogic(dax MyDax) sabi.Err {
-	data, err := dax.GetData()
+////
+
+type ADaxSrc struct {
+	AMap map[string]string
+}
+
+func NewADaxSrc() ADaxSrc {
+	return ADaxSrc{AMap: make(map[string]string)}
+}
+
+func (ds ADaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
+	return &ADaxConn{AMap: ds.AMap}, sabi.Ok()
+}
+
+type ADaxConn struct {
+	AMap map[string]string
+}
+
+func (conn *ADaxConn) Commit() sabi.Err {
+	logs.PushBack("ADaxConn#Commit")
+	return sabi.Ok()
+}
+func (conn *ADaxConn) Rollback() {
+	logs.PushBack("ADaxConn#Rollback")
+}
+func (conn *ADaxConn) Close() {
+	logs.PushBack("ADaxConn#Close")
+}
+
+type ADax struct {
+	sabi.Dax
+}
+
+func (dax ADax) GetADaxConn(name string) (*ADaxConn, sabi.Err) {
+	conn, err := dax.GetDaxConn(name)
 	if !err.IsOk() {
-		return err
+		return nil, err
 	}
-	data = strings.ToUpper(data)
-	return dax.SetData(data)
+	return conn.(*ADaxConn), err
 }
 
-// ====== Data access part ========
-
-type FooGetDataDax struct {
-	sabi.FooDax
+type BDaxSrc struct {
+	BMap map[string]string
 }
 
-func NewFooGetDataDax(base sabi.Dax) FooGetDataDax {
-	return FooGetDataDax{FooDax: sabi.NewFooDax(base)}
+func NewBDaxSrc() BDaxSrc {
+	return BDaxSrc{BMap: make(map[string]string)}
 }
 
-func (dax FooGetDataDax) GetData() (string, sabi.Err) {
-	_, err := dax.GetFooDaxConn("foo")
+func (ds BDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
+	if willFailToCreateBDaxConn {
+		return nil, sabi.NewErr(FailToCreateBDaxConn{})
+	}
+	return &BDaxConn{BMap: ds.BMap}, sabi.Ok()
+}
+
+type BDaxConn struct {
+	BMap map[string]string
+}
+
+func (conn *BDaxConn) Commit() sabi.Err {
+	if willFailToCommitBDaxConn {
+		return sabi.NewErr(FailToCommitBDaxConn{})
+	}
+	logs.PushBack("BDaxConn#Commit")
+	return sabi.Ok()
+}
+func (conn *BDaxConn) Rollback() {
+	logs.PushBack("BDaxConn#Rollback")
+}
+func (conn *BDaxConn) Close() {
+	logs.PushBack("BDaxConn#Close")
+}
+
+type BDax struct {
+	sabi.Dax
+}
+
+func (dax BDax) GetBDaxConn(name string) (*BDaxConn, sabi.Err) {
+	conn, err := dax.GetDaxConn(name)
+	if !err.IsOk() {
+		return nil, err
+	}
+	return conn.(*BDaxConn), err
+}
+
+type CDaxSrc struct {
+	CMap map[string]string
+}
+
+func NewCDaxSrc() CDaxSrc {
+	return CDaxSrc{CMap: make(map[string]string)}
+}
+
+func (ds CDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
+	return &CDaxConn{CMap: ds.CMap}, sabi.Ok()
+}
+
+type CDaxConn struct {
+	CMap map[string]string
+}
+
+func (conn *CDaxConn) Commit() sabi.Err {
+	logs.PushBack("CDaxConn#Commit")
+	return sabi.Ok()
+}
+func (conn *CDaxConn) Rollback() {
+	logs.PushBack("CDaxConn#Rollback")
+}
+func (conn *CDaxConn) Close() {
+	logs.PushBack("CDaxConn#Close")
+}
+
+type CDax struct {
+	sabi.Dax
+}
+
+func (dax CDax) GetCDaxConn(name string) (*CDaxConn, sabi.Err) {
+	conn, err := dax.GetDaxConn(name)
+	if !err.IsOk() {
+		return nil, err
+	}
+	return conn.(*CDaxConn), err
+}
+
+////
+
+type AGetDax struct {
+	ADax
+}
+
+func (dax AGetDax) GetAData() (string, sabi.Err) {
+	conn, err := dax.GetADaxConn("aaa")
 	if !err.IsOk() {
 		return "", err
 	}
-	data := "GetData"
+	data := conn.AMap["a"]
 	return data, sabi.Ok()
 }
 
-type BarSetDataDax struct {
-	sabi.BarDax
+type BGetSetDax struct {
+	BDax
 }
 
-func NewBarSetDataDax(base sabi.Dax) BarSetDataDax {
-	return BarSetDataDax{BarDax: sabi.NewBarDax(base)}
+func (dax BGetSetDax) GetBData() (string, sabi.Err) {
+	conn, err := dax.GetBDaxConn("bbb")
+	if !err.IsOk() {
+		return "", err
+	}
+	data := conn.BMap["b"]
+	return data, sabi.Ok()
 }
-
-func (dax BarSetDataDax) SetData(data string) sabi.Err {
-	conn, err := dax.GetBarDaxConn("bar")
+func (dax BGetSetDax) SetBData(data string) sabi.Err {
+	conn, err := dax.GetBDaxConn("bbb")
 	if !err.IsOk() {
 		return err
 	}
-	conn.Store("result", data)
+	conn.BMap["b"] = data
 	return sabi.Ok()
 }
 
-// ====== Procedure ========
-
-func NewDaxBase() sabi.DaxBase {
-	base := sabi.NewDaxBase()
-	return struct {
-		sabi.DaxBase
-		FooGetDataDax
-		BarSetDataDax
-	}{
-		DaxBase:       base,
-		FooGetDataDax: NewFooGetDataDax(base),
-		BarSetDataDax: NewBarSetDataDax(base),
-	}
+type CSetDax struct {
+	CDax
 }
+
+func (dax CSetDax) SetCData(data string) sabi.Err {
+	conn, err := dax.GetCDaxConn("ccc")
+	if !err.IsOk() {
+		return err
+	}
+	conn.CMap["c"] = data
+	return sabi.Ok()
+}
+
+////
 
 func TestRunTxn(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
+	clear()
+	defer clear()
 
-	sabi.AddGlobalDaxSrc("foo", sabi.FooDaxSrc{})
-	sabi.FixGlobalDaxSrcs()
+	type ABDax interface {
+		GetAData() (string, sabi.Err)
+		SetBData(data string) sabi.Err
+	}
 
-	store := make(map[string]string)
+	base := sabi.NewDaxBase()
+	base = struct {
+		sabi.DaxBase
+		AGetDax
+		BGetSetDax
+	}{
+		DaxBase:    base,
+		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
+		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+	}
 
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	aDs := NewADaxSrc()
+	bDs := NewBDaxSrc()
+	base.AddLocalDaxSrc("aaa", aDs)
+	base.AddLocalDaxSrc("bbb", bDs)
 
-	err := sabi.RunTxn(base, GetAndSetDataLogic)
+	aDs.AMap["a"] = "hello"
+	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
+		data, err := dax.GetAData()
+		if !err.IsOk() {
+			return err
+		}
+		data = strings.ToUpper(data)
+		err = dax.SetBData(data)
+		return err
+	})
 	assert.True(t, err.IsOk())
+	assert.Equal(t, bDs.BMap["b"], "HELLO")
 
-	assert.Equal(t, store["result"], "GETDATA")
+	elem := logs.Front()
+	if elem.Value == "ADaxConn#Commit" {
+		assert.Equal(t, elem.Value, "ADaxConn#Commit")
+		assert.Equal(t, elem.Next().Value, "BDaxConn#Commit")
+	} else {
+		assert.Equal(t, elem.Value, "BDaxConn#Commit")
+		assert.Equal(t, elem.Next().Value, "ADaxConn#Commit")
+	}
+	elem = elem.Next().Next()
+	if elem.Value == "ADaxConn#Close" {
+		assert.Equal(t, elem.Value, "ADaxConn#Close")
+		assert.Equal(t, elem.Next().Value, "BDaxConn#Close")
+	} else {
+		assert.Equal(t, elem.Value, "BDaxConn#Close")
+		assert.Equal(t, elem.Next().Value, "ADaxConn#Close")
+	}
 }
 
-func TestRunTxn_failToGetDaxConn(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
+func TestRunTxn_failToCreateDaxConn(t *testing.T) {
+	clear()
+	defer clear()
 
-	sabi.AddGlobalDaxSrc("foo", sabi.FooDaxSrc{})
-	sabi.FixGlobalDaxSrcs()
+	willFailToCreateBDaxConn = true
 
-	store := make(map[string]string)
+	type ABDax interface {
+		GetAData() (string, sabi.Err)
+		SetBData(data string) sabi.Err
+	}
 
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := sabi.NewDaxBase()
+	base = struct {
+		sabi.DaxBase
+		AGetDax
+		BGetSetDax
+	}{
+		DaxBase:    base,
+		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
+		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+	}
 
-	sabi.WillFailToCreateFooDaxConn = true
+	aDs := NewADaxSrc()
+	bDs := NewBDaxSrc()
+	base.AddLocalDaxSrc("aaa", aDs)
+	base.AddLocalDaxSrc("bbb", bDs)
 
-	err := sabi.RunTxn(base, GetAndSetDataLogic)
+	aDs.AMap["a"] = "hello"
+	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
+		data, err := dax.GetAData()
+		if !err.IsOk() {
+			return err
+		}
+		data = strings.ToUpper(data)
+		err = dax.SetBData(data)
+		return err
+	})
+	assert.False(t, err.IsOk())
 	switch err.Reason().(type) {
 	case sabi.FailToCreateDaxConn:
-		assert.Equal(t, err.Get("Name"), "foo")
-		switch err.Cause().(sabi.Err).Reason().(type) {
-		case sabi.InvalidDaxConn:
+		reason := err.Reason().(sabi.FailToCreateDaxConn)
+		assert.Equal(t, reason.Name, "bbb")
+		cause := err.Cause().(sabi.Err)
+		switch cause.Reason().(type) {
+		case FailToCreateBDaxConn:
 		default:
 			assert.Fail(t, err.Error())
 		}
 	default:
 		assert.Fail(t, err.Error())
 	}
+	assert.Equal(t, bDs.BMap["b"], "")
 
-	assert.Equal(t, store["result"], "")
+	assert.Equal(t, logs.Front().Value, "ADaxConn#Rollback")
+	assert.Equal(t, logs.Front().Next().Value, "ADaxConn#Close")
 }
 
-func TestProc_RunTxn_failToCommitDaxConn(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
+func TestRunTxn_failToCommitDaxConn(t *testing.T) {
+	clear()
+	defer clear()
 
-	sabi.AddGlobalDaxSrc("foo", sabi.FooDaxSrc{})
-	sabi.FixGlobalDaxSrcs()
+	willFailToCommitBDaxConn = true
 
-	store := make(map[string]string)
+	type ABDax interface {
+		GetAData() (string, sabi.Err)
+		SetBData(data string) sabi.Err
+	}
 
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	base := sabi.NewDaxBase()
+	base = struct {
+		sabi.DaxBase
+		AGetDax
+		BGetSetDax
+	}{
+		DaxBase:    base,
+		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
+		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+	}
 
-	sabi.WillFailToCommitFooDaxConn = true
+	aDs := NewADaxSrc()
+	bDs := NewBDaxSrc()
+	base.AddLocalDaxSrc("aaa", aDs)
+	base.AddLocalDaxSrc("bbb", bDs)
 
-	err := sabi.RunTxn(base, GetAndSetDataLogic)
+	aDs.AMap["a"] = "hello"
+	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
+		data, err := dax.GetAData()
+		if !err.IsOk() {
+			return err
+		}
+		data = strings.ToUpper(data)
+		err = dax.SetBData(data)
+		return err
+	})
+	assert.False(t, err.IsOk())
+
 	switch err.Reason().(type) {
 	case sabi.FailToCommitDaxConn:
-		errs := err.Get("Errors").(map[string]sabi.Err)
-		assert.Equal(t, len(errs), 1)
-		switch errs["foo"].Reason().(type) {
-		case sabi.InvalidDaxConn:
+		reason := err.Reason().(sabi.FailToCommitDaxConn)
+		assert.Equal(t, len(reason.Errors), 1)
+		err = reason.Errors["bbb"]
+		switch err.Reason().(type) {
+		case FailToCommitBDaxConn:
 		default:
 			assert.Fail(t, err.Error())
 		}
@@ -150,84 +370,70 @@ func TestProc_RunTxn_failToCommitDaxConn(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, store["result"], "GETDATA")
+	assert.Equal(t, logs.Front().Value, "ADaxConn#Commit")
+
+	elem := logs.Front().Next()
+	if elem.Value == "ADaxConn#Rollback" {
+		assert.Equal(t, elem.Value, "ADaxConn#Rollback")
+		assert.Equal(t, elem.Next().Value, "BDaxConn#Rollback")
+	} else {
+		assert.Equal(t, elem.Value, "BDaxConn#Rollback")
+		assert.Equal(t, elem.Next().Value, "ADaxConn#Rollback")
+	}
+	elem = elem.Next().Next()
+	if elem.Value == "ADaxConn#Close" {
+		assert.Equal(t, elem.Value, "ADaxConn#Close")
+		assert.Equal(t, elem.Next().Value, "BDaxConn#Close")
+	} else {
+		assert.Equal(t, elem.Value, "BDaxConn#Close")
+		assert.Equal(t, elem.Next().Value, "ADaxConn#Close")
+	}
 }
 
-func TestTxn_Run(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
+func TestRunTxn_Run_errorInLogic(t *testing.T) {
+	clear()
+	defer clear()
 
-	store := make(map[string]string)
+	willFailToCommitBDaxConn = true
 
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
+	type ABDax interface {
+		GetAData() (string, sabi.Err)
+		SetBData(data string) sabi.Err
+	}
 
-	txn := sabi.Txn(base, GetAndSetDataLogic)
+	base := sabi.NewDaxBase()
+	base = struct {
+		sabi.DaxBase
+		AGetDax
+		BGetSetDax
+	}{
+		DaxBase:    base,
+		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
+		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+	}
 
-	err := txn.Run()
-	assert.True(t, err.IsOk())
+	aDs := NewADaxSrc()
+	bDs := NewBDaxSrc()
+	base.AddLocalDaxSrc("aaa", aDs)
+	base.AddLocalDaxSrc("bbb", bDs)
 
-	assert.Equal(t, store["result"], "GETDATA")
-}
+	aDs.AMap["a"] = "hello"
+	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
+		_, err := dax.GetAData()
+		if !err.IsOk() {
+			return err
+		}
+		return sabi.NewErr(FailToRunLogic{})
+	})
+	assert.False(t, err.IsOk())
 
-func TestTxn_Run_failToGetConn(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
-
-	store := make(map[string]string)
-
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
-
-	txn := sabi.Txn(base, GetAndSetDataLogic)
-
-	sabi.WillFailToCreateFooDaxConn = true
-
-	err := txn.Run()
 	switch err.Reason().(type) {
-	case sabi.FailToCreateDaxConn:
-		assert.Equal(t, err.Get("Name"), "foo")
-		switch err.Cause().(sabi.Err).Reason().(type) {
-		case sabi.InvalidDaxConn:
-		default:
-			assert.Fail(t, err.Error())
-		}
+	case FailToRunLogic:
 	default:
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, store["result"], "")
-}
-
-func TestTxn_Run_failToCommitConn(t *testing.T) {
-	sabi.Clear()
-	defer sabi.Clear()
-
-	store := make(map[string]string)
-
-	base := NewDaxBase()
-	base.AddLocalDaxSrc("foo", sabi.FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &sabi.BarDaxSrc{Store: store})
-
-	txn := sabi.Txn(base, GetAndSetDataLogic)
-
-	sabi.WillFailToCommitFooDaxConn = true
-
-	err := txn.Run()
-	switch err.Reason().(type) {
-	case sabi.FailToCommitDaxConn:
-		errs := err.Get("Errors").(map[string]sabi.Err)
-		assert.Equal(t, len(errs), 1)
-		switch errs["foo"].Reason().(type) {
-		case sabi.InvalidDaxConn:
-		default:
-			assert.Fail(t, err.Error())
-		}
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	assert.Equal(t, store["result"], "GETDATA")
+	elem := logs.Front()
+	assert.Equal(t, elem.Value, "ADaxConn#Rollback")
+	assert.Equal(t, elem.Next().Value, "ADaxConn#Close")
 }

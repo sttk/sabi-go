@@ -14,11 +14,11 @@ type (
 	}
 )
 
-var logs list.List
+var runnerLogs list.List
 var errorRunnerName string
 
-func ClearLogs() {
-	logs.Init()
+func clearLogs() {
+	runnerLogs.Init()
 	errorRunnerName = ""
 }
 
@@ -32,13 +32,13 @@ func (r MyRunner) Run() sabi.Err {
 	if r.Name == errorRunnerName {
 		return sabi.NewErr(FailToRun{Name: r.Name})
 	}
-	logs.PushBack(r.Name)
+	runnerLogs.PushBack(r.Name)
 	return sabi.Ok()
 }
 
 func TestSeq(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
 	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
@@ -48,15 +48,15 @@ func TestSeq(t *testing.T) {
 	err := r3.Run()
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, logs.Len(), 3)
-	assert.Equal(t, logs.Front().Value, "r-0")
-	assert.Equal(t, logs.Front().Next().Value, "r-1")
-	assert.Equal(t, logs.Front().Next().Next().Value, "r-2")
+	assert.Equal(t, runnerLogs.Len(), 3)
+	assert.Equal(t, runnerLogs.Front().Value, "r-0")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-1")
+	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-2")
 }
 
 func TestSeq_FailToRun(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	errorRunnerName = "r-1"
 
@@ -74,13 +74,13 @@ func TestSeq_FailToRun(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, logs.Len(), 1)
-	assert.Equal(t, logs.Front().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 1)
+	assert.Equal(t, runnerLogs.Front().Value, "r-0")
 }
 
 func TestPara(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
 	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
@@ -90,15 +90,15 @@ func TestPara(t *testing.T) {
 	err := r3.Run()
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, logs.Len(), 3)
-	assert.Equal(t, logs.Front().Value, "r-1")
-	assert.Equal(t, logs.Front().Next().Value, "r-2")
-	assert.Equal(t, logs.Front().Next().Next().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 3)
+	assert.Equal(t, runnerLogs.Front().Value, "r-1")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-2")
+	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-0")
 }
 
 func TestPara_FailToRun(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	errorRunnerName = "r-1"
 
@@ -118,14 +118,14 @@ func TestPara_FailToRun(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, logs.Len(), 2)
-	assert.Equal(t, logs.Front().Value, "r-2")
-	assert.Equal(t, logs.Front().Next().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 2)
+	assert.Equal(t, runnerLogs.Front().Value, "r-2")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-0")
 }
 
 func TestRunSeq(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
 	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
@@ -134,15 +134,15 @@ func TestRunSeq(t *testing.T) {
 	err := sabi.RunSeq(r0, r1, r2)
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, logs.Len(), 3)
-	assert.Equal(t, logs.Front().Value, "r-0")
-	assert.Equal(t, logs.Front().Next().Value, "r-1")
-	assert.Equal(t, logs.Front().Next().Next().Value, "r-2")
+	assert.Equal(t, runnerLogs.Len(), 3)
+	assert.Equal(t, runnerLogs.Front().Value, "r-0")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-1")
+	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-2")
 }
 
 func TestRunSeq_FailToRun(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	errorRunnerName = "r-1"
 
@@ -160,13 +160,13 @@ func TestRunSeq_FailToRun(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, logs.Len(), 1)
-	assert.Equal(t, logs.Front().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 1)
+	assert.Equal(t, runnerLogs.Front().Value, "r-0")
 }
 
 func TestRunPara(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
 	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
@@ -175,15 +175,15 @@ func TestRunPara(t *testing.T) {
 	err := sabi.RunPara(r0, r1, r2)
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, logs.Len(), 3)
-	assert.Equal(t, logs.Front().Value, "r-1")
-	assert.Equal(t, logs.Front().Next().Value, "r-2")
-	assert.Equal(t, logs.Front().Next().Next().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 3)
+	assert.Equal(t, runnerLogs.Front().Value, "r-1")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-2")
+	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-0")
 }
 
 func TestRunPara_FailToRun(t *testing.T) {
-	ClearLogs()
-	defer ClearLogs()
+	clearLogs()
+	defer clearLogs()
 
 	errorRunnerName = "r-1"
 
@@ -203,7 +203,7 @@ func TestRunPara_FailToRun(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, logs.Len(), 2)
-	assert.Equal(t, logs.Front().Value, "r-2")
-	assert.Equal(t, logs.Front().Next().Value, "r-0")
+	assert.Equal(t, runnerLogs.Len(), 2)
+	assert.Equal(t, runnerLogs.Front().Value, "r-2")
+	assert.Equal(t, runnerLogs.Front().Next().Value, "r-0")
 }

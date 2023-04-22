@@ -6,100 +6,40 @@ import (
 	"reflect"
 )
 
-func unused(v interface{}) {}
-
-type FooDaxConn struct {
-}
-
-func (conn *FooDaxConn) Commit() sabi.Err {
-	return sabi.Ok()
-}
-func (conn *FooDaxConn) Rollback() {
-}
-func (conn *FooDaxConn) Close() {
-}
-
-type FooDaxSrc struct {
-}
-
-func (ds FooDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
-	return &FooDaxConn{}, sabi.Ok()
-}
-
-type BarDaxConn struct {
-}
-
-func (conn *BarDaxConn) Commit() sabi.Err {
-	return sabi.Ok()
-}
-func (conn *BarDaxConn) Rollback() {
-}
-func (conn *BarDaxConn) Close() {
-}
-
-type BarDaxSrc struct {
-}
-
-func (ds BarDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
-	return &BarDaxConn{}, sabi.Ok()
-}
-
-type FooGetterDax struct {
-	sabi.Dax
-}
-
-func (dax FooGetterDax) GetData() string {
-	return "hello"
-}
-
-type BarSetterDax struct {
-	sabi.Dax
-}
-
-func (dax BarSetterDax) SetData(data string) {
-}
-
 func ExampleAddGlobalDaxSrc() {
-	sabi.AddGlobalDaxSrc("hoge", FooDaxSrc{})
-	sabi.AddGlobalDaxSrc("fuga", BarDaxSrc{})
+	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
 
 	base := sabi.NewDaxBase()
 
-	type FooBarDax struct {
+	type MyDax struct {
 		sabi.Dax
 	}
 
-	dax := FooBarDax{Dax: base}
+	dax := MyDax{Dax: base}
 
 	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
-
-	conn, err = dax.GetDaxConn("fuga")
-	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
+	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.FooDaxConn
-	// err.IsOk() = true
-	// conn = *sabi_test.BarDaxConn
+	// conn = *sabi_test.MapDaxConn
 	// err.IsOk() = true
 
-	sabi.Clear()
+	sabi.ClearDaxBase()
 }
 
 func ExampleFixGlobalDaxSrcs() {
-	sabi.AddGlobalDaxSrc("hoge", FooDaxSrc{})
+	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
 	sabi.FixGlobalDaxSrcs()
-	sabi.AddGlobalDaxSrc("fuga", BarDaxSrc{})
+	sabi.AddGlobalDaxSrc("fuga", NewMapDaxSrc())
 
 	base := sabi.NewDaxBase()
 
-	type FooBarDax struct {
+	type MyDax struct {
 		sabi.Dax
 	}
 
-	dax := FooBarDax{Dax: base}
+	dax := MyDax{Dax: base}
 
 	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
@@ -107,72 +47,125 @@ func ExampleFixGlobalDaxSrcs() {
 
 	conn, err = dax.GetDaxConn("fuga")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
-	fmt.Printf("err.Error() = %v\n", err.Error())
+	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
+	fmt.Printf("err.Error() = %s\n", err.Error())
 
 	// Output:
-	// conn = *sabi_test.FooDaxConn
+	// conn = *sabi_test.MapDaxConn
 	// err.IsOk() = true
 	// conn = <nil>
 	// err.IsOk() = false
 	// err.Error() = {reason=DaxSrcIsNotFound, Name=fuga}
 
-	sabi.Clear()
-}
-
-func ExampleNewDaxBase() {
-	base := sabi.NewDaxBase()
-
-	// Output:
-	unused(base)
+	sabi.ClearDaxBase()
 }
 
 func ExampleDaxBase_AddLocalDaxSrc() {
 	base := sabi.NewDaxBase()
-	base.AddLocalDaxSrc("hoge", FooDaxSrc{})
+	base.AddLocalDaxSrc("hoge", NewMapDaxSrc())
 
-	type FooBarDax struct {
+	type MyDax struct {
 		sabi.Dax
 	}
 
-	dax := FooBarDax{Dax: base}
+	dax := MyDax{Dax: base}
 
 	conn, err := dax.GetDaxConn("hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.FooDaxConn
+	// conn = *sabi_test.MapDaxConn
 	// err.IsOk() = true
 
-	sabi.Clear()
+	sabi.ClearDaxBase()
+}
+
+type GettingDax struct {
+	sabi.Dax
+}
+
+func (dax GettingDax) GetData() (string, sabi.Err) {
+	conn, err := dax.GetDaxConn("hoge")
+	if !err.IsOk() {
+		return "", err
+	}
+	data := conn.(*MapDaxConn).dataMap["hogehoge"]
+	return data, err
+}
+
+type SettingDax struct {
+	sabi.Dax
+}
+
+func (dax SettingDax) SetData(data string) sabi.Err {
+	conn, err := dax.GetDaxConn("fuga")
+	if !err.IsOk() {
+		return err
+	}
+	conn.(*MapDaxConn).dataMap["fugafuga"] = data
+	return err
 }
 
 func ExampleDax() {
-	base0 := sabi.NewDaxBase()
+	// type GettingDax struct {
+	//   sabi.Dax
+	// }
+	// func (dax GettingDax) GetData() (string, sabi.Err) {
+	//   conn, err := dax.GetDaxConn("hoge")
+	//   if !err.IsOk() {
+	//     return nil, err
+	//   }
+	//   return conn.dataMap["hogehoge"], err
+	// }
+	//
+	// type SettingDax struct {
+	//   sabi.Dax
+	// }
+	// func (dax SettingDax) SetData(data string) sabi.Err {
+	//   conn, err := dax.GetDaxConn("fuga")
+	//   if !err.IsOk() {
+	//     return nil, err
+	//   }
+	//   conn.dataMap["fugafuga"] = data
+	//   return err
+	// }
 
-	type MyDax interface {
-		GetData() string
-		SetData(data string)
-	}
+	hogeDs := NewMapDaxSrc()
+	fugaDs := NewMapDaxSrc()
 
-	base := struct {
+	base := sabi.NewDaxBase()
+	base.AddLocalDaxSrc("hoge", hogeDs)
+	base.AddLocalDaxSrc("fuga", fugaDs)
+
+	base = struct {
 		sabi.DaxBase
-		FooGetterDax
-		BarSetterDax
+		GettingDax
+		SettingDax
 	}{
-		DaxBase:      base0,
-		FooGetterDax: FooGetterDax{Dax: base0},
-		BarSetterDax: BarSetterDax{Dax: base0},
+		DaxBase:    base,
+		GettingDax: GettingDax{Dax: base},
+		SettingDax: SettingDax{Dax: base},
 	}
 
-	sabi.RunTxn(base, func(dax MyDax) sabi.Err {
-		data := dax.GetData()
-		dax.SetData(data)
-		return sabi.Ok()
+	type DaxForLogic interface {
+		GetData() (string, sabi.Err)
+		SetData(data string) sabi.Err
+	}
+
+	hogeDs.dataMap["hogehoge"] = "hello"
+	err := sabi.RunTxn(base, func(dax DaxForLogic) sabi.Err {
+		data, err := dax.GetData()
+		if !err.IsOk() {
+			return err
+		}
+		err = dax.SetData(data)
+		return err
 	})
+	fmt.Printf("%t\n", err.IsOk())
+	fmt.Printf("%s\n", fugaDs.dataMap["fugafuga"])
 
 	// Output:
-
-	sabi.Clear()
+	// true
+	// hello
 }

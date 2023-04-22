@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+func unused2(v any) {}
+
 func BenchmarkNotify_addErrHandler(b *testing.B) {
 	b.StartTimer()
 	//sabi.AddSyncErrHandler(func(err sabi.Err, occ sabi.ErrOccasion) {})
@@ -21,7 +23,7 @@ func BenchmarkNotify_ok(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused2(err)
 }
 
 func BenchmarkNotify_emptyReason(b *testing.B) {
@@ -32,7 +34,7 @@ func BenchmarkNotify_emptyReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused2(err)
 }
 
 func BenchmarkNotify_oneFieldReason(b *testing.B) {
@@ -43,7 +45,7 @@ func BenchmarkNotify_oneFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused2(err)
 }
 
 func BenchmarkNotify_fiveFieldReason(b *testing.B) {
@@ -54,7 +56,7 @@ func BenchmarkNotify_fiveFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused2(err)
 }
 
 func BenchmarkNotify_havingCauseReason(b *testing.B) {
@@ -65,5 +67,5 @@ func BenchmarkNotify_havingCauseReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	b_unused(err)
+	unused2(err)
 }
