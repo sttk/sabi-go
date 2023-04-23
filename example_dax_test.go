@@ -28,9 +28,14 @@ func ExampleAddGlobalDaxSrc() {
 	sabi.ClearDaxBase()
 }
 
-func ExampleFixGlobalDaxSrcs() {
+func ExampleStartUpGlobalDaxSrcs() {
 	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
-	sabi.FixGlobalDaxSrcs()
+
+	if err := sabi.StartUpGlobalDaxSrcs(); !err.IsOk() {
+		return
+	}
+	defer sabi.ShutdownGlobalDaxSrcs()
+
 	sabi.AddGlobalDaxSrc("fuga", NewMapDaxSrc())
 
 	base := sabi.NewDaxBase()

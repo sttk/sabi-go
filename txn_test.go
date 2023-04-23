@@ -42,6 +42,13 @@ func (ds ADaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &ADaxConn{AMap: ds.AMap}, sabi.Ok()
 }
 
+func (ds ADaxSrc) StartUp() sabi.Err {
+	return sabi.Ok()
+}
+
+func (ds ADaxSrc) Shutdown() {
+}
+
 type ADaxConn struct {
 	AMap map[string]string
 }
@@ -84,6 +91,13 @@ func (ds BDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &BDaxConn{BMap: ds.BMap}, sabi.Ok()
 }
 
+func (ds BDaxSrc) StartUp() sabi.Err {
+	return sabi.Ok()
+}
+
+func (ds BDaxSrc) Shutdown() {
+}
+
 type BDaxConn struct {
 	BMap map[string]string
 }
@@ -124,6 +138,13 @@ func NewCDaxSrc() CDaxSrc {
 
 func (ds CDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &CDaxConn{CMap: ds.CMap}, sabi.Ok()
+}
+
+func (ds CDaxSrc) StartUp() sabi.Err {
+	return sabi.Ok()
+}
+
+func (ds CDaxSrc) Shutdown() {
 }
 
 type CDaxConn struct {
