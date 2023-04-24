@@ -43,6 +43,11 @@ func (err Err) IsOk() bool {
 	return (err.reason == nil)
 }
 
+// IsNotOk method checks whether this Err indicates an error.
+func (err Err) IsNotOk() bool {
+	return (err.reason != nil)
+}
+
 // Reason method returns an err reaason struct.
 func (err Err) Reason() any {
 	return err.reason

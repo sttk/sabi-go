@@ -36,6 +36,7 @@ func TestNewErr_reasonIsValue(t *testing.T) {
 	}
 
 	assert.False(t, err.IsOk())
+	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
 	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
@@ -71,6 +72,7 @@ func TestNewErr_reasonIsPointer(t *testing.T) {
 	}
 
 	assert.False(t, err.IsOk())
+	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
 	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
@@ -107,6 +109,7 @@ func TestNewErr_withCause(t *testing.T) {
 	}
 
 	assert.False(t, err.IsOk())
+	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
 	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
@@ -145,6 +148,7 @@ func TestNewErr_causeIsAlsoErr(t *testing.T) {
 	}
 
 	assert.False(t, err.IsOk())
+	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
 	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
 
@@ -185,6 +189,7 @@ func TestOk(t *testing.T) {
 	}
 
 	assert.True(t, err.IsOk())
+	assert.False(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "")
 	assert.Equal(t, err.ReasonPackage(), "")
 	assert.Nil(t, err.Get("Value"))
