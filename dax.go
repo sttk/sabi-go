@@ -57,7 +57,7 @@ type DaxConn interface {
 // This interface defines a method: CreateDaxConn to creates a DaxConn instance
 // and returns its pointer.
 // This interface also defines methods: StartUp and Shutdown, which are for
-// initialization and termination of this DaxSrc instnace.
+// initialization and termination of this DaxSrc instance.
 type DaxSrc interface {
 	CreateDaxConn() (DaxConn, Err)
 	StartUp() Err
