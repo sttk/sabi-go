@@ -9,6 +9,15 @@ import (
 )
 
 type /* error reasons */ (
+	// FailToStartUpGlobalDaxSrcs is an error reason which indicates that some
+	// dax sources failed to start up.
+	// The field: Errors is a map of which keys are the registered names of
+	// DaxSrc(s) which failed to start up, and of which values are Err having
+	// their error reasons.
+	FailToStartUpGlobalDaxSrcs struct {
+		Errors map[string]Err
+	}
+
 	// DaxSrcIsNotFound is an error reason which indicates that a specified data
 	// source is not found.
 	// The field: Name is a registered name of a DaxSrc not found.
@@ -47,8 +56,12 @@ type DaxConn interface {
 // data store.
 // This interface defines a method: CreateDaxConn to creates a DaxConn instance
 // and returns its pointer.
+// This interface also defines methods: StartUp and Shutdown, which are for
+// initialization and termination of this DaxSrc instance.
 type DaxSrc interface {
 	CreateDaxConn() (DaxConn, Err)
+	StartUp() Err
+	Shutdown()
 }
 
 // Dax is an interface for a set of data access methods.
@@ -87,9 +100,56 @@ func AddGlobalDaxSrc(name string, ds DaxSrc) {
 	}
 }
 
-// FixGlobalDaxSrcs makes unable to register any further global DaxSrc.
-func FixGlobalDaxSrcs() {
+// StartUpGlobalDaxSrcs is a function to forbid adding more global dax sources
+// and to initialize registered global dax sources by calling StartUp method of
+// each DaxSrc.
+// If even one DaxSrc fail to execute its StartUp method, this function
+// executes Shutdown methods of all global DaxSrc(s) and returns sabi.Err.
+func StartUpGlobalDaxSrcs() Err {
 	isGlobalDaxSrcsFixed = true
+
+	ch := make(chan namedErr)
+
+	for name, ds := range globalDaxSrcMap {
+		go func(name string, ds DaxSrc, ch chan namedErr) {
+			err := ds.StartUp()
+			ne := namedErr{name: name, err: err}
+			ch <- ne
+		}(name, ds, ch)
+	}
+
+	errs := make(map[string]Err)
+	n := len(globalDaxSrcMap)
+	for i := 0; i < n; i++ {
+		select {
+		case ne := <-ch:
+			if !ne.err.IsOk() {
+				errs[ne.name] = ne.err
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		ShutdownGlobalDaxSrcs()
+		return NewErr(FailToStartUpGlobalDaxSrcs{Errors: errs})
+	}
+
+	return Ok()
+}
+
+// ShutdownGlobalDaxSrcs is a function to terminate all global dax sources.
+func ShutdownGlobalDaxSrcs() {
+	var wg sync.WaitGroup
+	wg.Add(len(globalDaxSrcMap))
+
+	for _, ds := range globalDaxSrcMap {
+		go func(ds DaxSrc) {
+			defer wg.Done()
+			ds.Shutdown()
+		}(ds)
+	}
+
+	wg.Wait()
 }
 
 // DaxBase is an interface which works as a front of an implementation as a

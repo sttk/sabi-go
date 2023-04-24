@@ -20,6 +20,13 @@ func (ds MapDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &MapDaxConn{dataMap: ds.dataMap}, sabi.Ok()
 }
 
+func (ds MapDaxSrc) StartUp() sabi.Err {
+	return sabi.Ok()
+}
+
+func (ds MapDaxSrc) Shutdown() {
+}
+
 //// MapDaxConn
 
 type MapDaxConn struct {
