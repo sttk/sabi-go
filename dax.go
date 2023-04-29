@@ -56,12 +56,12 @@ type DaxConn interface {
 // data store.
 // This interface defines a method: CreateDaxConn to creates a DaxConn instance
 // and returns its pointer.
-// This interface also defines methods: StartUp and Shutdown, which are for
-// initialization and termination of this DaxSrc instance.
+// This interface also defines methods: SetUp and End, which makes available
+// and frees this dax source.
 type DaxSrc interface {
 	CreateDaxConn() (DaxConn, Err)
-	StartUp() Err
-	Shutdown()
+	SetUp() Err
+	End()
 }
 
 // Dax is an interface for a set of data access methods.
@@ -101,10 +101,10 @@ func AddGlobalDaxSrc(name string, ds DaxSrc) {
 }
 
 // StartUpGlobalDaxSrcs is a function to forbid adding more global dax sources
-// and to initialize registered global dax sources by calling StartUp method of
-// each DaxSrc.
-// If even one DaxSrc fail to execute its StartUp method, this function
-// executes Shutdown methods of all global DaxSrc(s) and returns sabi.Err.
+// and to make available the registered global dax sources by calling Setup
+// method of each DaxSrc.
+// If even one DaxSrc fail to execute its SstUp method, this function
+// executes Release methods of all global DaxSrc(s) and returns sabi.Err.
 func StartUpGlobalDaxSrcs() Err {
 	isGlobalDaxSrcsFixed = true
 
@@ -112,7 +112,7 @@ func StartUpGlobalDaxSrcs() Err {
 
 	for name, ds := range globalDaxSrcMap {
 		go func(name string, ds DaxSrc, ch chan namedErr) {
-			err := ds.StartUp()
+			err := ds.SetUp()
 			ne := namedErr{name: name, err: err}
 			ch <- ne
 		}(name, ds, ch)
@@ -145,7 +145,7 @@ func ShutdownGlobalDaxSrcs() {
 	for _, ds := range globalDaxSrcMap {
 		go func(ds DaxSrc) {
 			defer wg.Done()
-			ds.Shutdown()
+			ds.End()
 		}(ds)
 	}
 
@@ -153,10 +153,10 @@ func ShutdownGlobalDaxSrcs() {
 }
 
 // DaxBase is an interface which works as a front of an implementation as a
-// base of data connection sources, and defines methods: AddLocalDaxSrc and
-// RemoveLocalDaxSrc.
+// base of data connection sources, and defines methods: SetUpLocalDaxSrc and
+// FreeLocalDaxSrc.
 //
-// AddLocalDaxSrc method registered a DaxSrc with a name in this
+// SetUpLocalDaxSrc method registered a DaxSrc with a name in this
 // implementation, but  ignores to add a local DaxSrc when its name is already
 // registered.
 // In addition, this method ignores to add local DaxSrc(s) while the
@@ -166,8 +166,9 @@ func ShutdownGlobalDaxSrcs() {
 // Also this has unexported methods for a transaction process.
 type DaxBase interface {
 	Dax
-	AddLocalDaxSrc(name string, ds DaxSrc)
-	RemoveLocalDaxSrc(name string)
+	SetUpLocalDaxSrc(name string, ds DaxSrc) Err
+	FreeLocalDaxSrc(name string)
+	FreeAllLocalDaxSrcs()
 	begin()
 	commit() Err
 	rollback()
@@ -190,24 +191,47 @@ func NewDaxBase() DaxBase {
 	}
 }
 
-func (base *daxBaseImpl) AddLocalDaxSrc(name string, ds DaxSrc) {
+func (base *daxBaseImpl) SetUpLocalDaxSrc(name string, ds DaxSrc) Err {
 	base.daxConnMutex.Lock()
 	defer base.daxConnMutex.Unlock()
 
 	if !base.isLocalDaxSrcsFixed {
 		_, exists := base.localDaxSrcMap[name]
 		if !exists {
+			err := ds.SetUp()
+			if !err.IsOk() {
+				return err
+			}
 			base.localDaxSrcMap[name] = ds
 		}
 	}
+
+	return Ok()
 }
 
-func (base *daxBaseImpl) RemoveLocalDaxSrc(name string) {
+func (base *daxBaseImpl) FreeLocalDaxSrc(name string) {
 	base.daxConnMutex.Lock()
 	defer base.daxConnMutex.Unlock()
 
 	if !base.isLocalDaxSrcsFixed {
-		delete(base.localDaxSrcMap, name)
+		ds, exists := base.localDaxSrcMap[name]
+		if exists {
+			delete(base.localDaxSrcMap, name)
+			ds.End()
+		}
+	}
+}
+
+func (base *daxBaseImpl) FreeAllLocalDaxSrcs() {
+	base.daxConnMutex.Lock()
+	defer base.daxConnMutex.Unlock()
+
+	if !base.isLocalDaxSrcsFixed {
+		for _, ds := range base.localDaxSrcMap {
+			ds.End()
+		}
+
+		base.localDaxSrcMap = make(map[string]DaxSrc)
 	}
 }
 

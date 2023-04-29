@@ -42,11 +42,11 @@ func (ds ADaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &ADaxConn{AMap: ds.AMap}, sabi.Ok()
 }
 
-func (ds ADaxSrc) StartUp() sabi.Err {
+func (ds ADaxSrc) SetUp() sabi.Err {
 	return sabi.Ok()
 }
 
-func (ds ADaxSrc) Shutdown() {
+func (ds ADaxSrc) End() {
 }
 
 type ADaxConn struct {
@@ -91,11 +91,11 @@ func (ds BDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &BDaxConn{BMap: ds.BMap}, sabi.Ok()
 }
 
-func (ds BDaxSrc) StartUp() sabi.Err {
+func (ds BDaxSrc) SetUp() sabi.Err {
 	return sabi.Ok()
 }
 
-func (ds BDaxSrc) Shutdown() {
+func (ds BDaxSrc) End() {
 }
 
 type BDaxConn struct {
@@ -140,11 +140,11 @@ func (ds CDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &CDaxConn{CMap: ds.CMap}, sabi.Ok()
 }
 
-func (ds CDaxSrc) StartUp() sabi.Err {
+func (ds CDaxSrc) SetUp() sabi.Err {
 	return sabi.Ok()
 }
 
-func (ds CDaxSrc) Shutdown() {
+func (ds CDaxSrc) End() {
 }
 
 type CDaxConn struct {
@@ -247,8 +247,8 @@ func TestRunTxn(t *testing.T) {
 
 	aDs := NewADaxSrc()
 	bDs := NewBDaxSrc()
-	base.AddLocalDaxSrc("aaa", aDs)
-	base.AddLocalDaxSrc("bbb", bDs)
+	base.SetUpLocalDaxSrc("aaa", aDs)
+	base.SetUpLocalDaxSrc("bbb", bDs)
 
 	aDs.AMap["a"] = "hello"
 	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
@@ -305,8 +305,8 @@ func TestRunTxn_failToCreateDaxConn(t *testing.T) {
 
 	aDs := NewADaxSrc()
 	bDs := NewBDaxSrc()
-	base.AddLocalDaxSrc("aaa", aDs)
-	base.AddLocalDaxSrc("bbb", bDs)
+	base.SetUpLocalDaxSrc("aaa", aDs)
+	base.SetUpLocalDaxSrc("bbb", bDs)
 
 	aDs.AMap["a"] = "hello"
 	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
@@ -362,8 +362,8 @@ func TestRunTxn_failToCommitDaxConn(t *testing.T) {
 
 	aDs := NewADaxSrc()
 	bDs := NewBDaxSrc()
-	base.AddLocalDaxSrc("aaa", aDs)
-	base.AddLocalDaxSrc("bbb", bDs)
+	base.SetUpLocalDaxSrc("aaa", aDs)
+	base.SetUpLocalDaxSrc("bbb", bDs)
 
 	aDs.AMap["a"] = "hello"
 	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {
@@ -435,8 +435,8 @@ func TestRunTxn_Run_errorInLogic(t *testing.T) {
 
 	aDs := NewADaxSrc()
 	bDs := NewBDaxSrc()
-	base.AddLocalDaxSrc("aaa", aDs)
-	base.AddLocalDaxSrc("bbb", bDs)
+	base.SetUpLocalDaxSrc("aaa", aDs)
+	base.SetUpLocalDaxSrc("bbb", bDs)
 
 	aDs.AMap["a"] = "hello"
 	err := sabi.RunTxn(base, func(dax ABDax) sabi.Err {

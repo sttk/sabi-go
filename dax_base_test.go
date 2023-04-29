@@ -8,6 +8,7 @@ import (
 )
 
 var logs list.List
+var WillFailToSetUpFooDaxSrc bool = false
 var WillFailToCreateFooDaxConn bool = false
 var WillFailToCommitFooDaxConn bool = false
 
@@ -21,6 +22,7 @@ func ClearDaxBase() {
 
 	logs.Init()
 
+	WillFailToSetUpFooDaxSrc = false
 	WillFailToCreateFooDaxConn = false
 	WillFailToCommitFooDaxConn = false
 }
@@ -57,13 +59,16 @@ func (ds FooDaxSrc) CreateDaxConn() (DaxConn, Err) {
 	return &FooDaxConn{Label: ds.Label}, Ok()
 }
 
-func (ds FooDaxSrc) StartUp() Err {
-	logs.PushBack("FooDaxSrc#StartUp")
+func (ds FooDaxSrc) SetUp() Err {
+	if WillFailToSetUpFooDaxSrc {
+		return NewErr(InvalidDaxConn{})
+	}
+	logs.PushBack("FooDaxSrc#SetUp")
 	return Ok()
 }
 
-func (ds FooDaxSrc) Shutdown() {
-	logs.PushBack("FooDaxSrc#Shutdown")
+func (ds FooDaxSrc) End() {
+	logs.PushBack("FooDaxSrc#End")
 }
 
 type BarDaxConn struct {
@@ -98,13 +103,13 @@ func (ds BarDaxSrc) CreateDaxConn() (DaxConn, Err) {
 	return &BarDaxConn{Label: ds.Label, store: ds.Store}, Ok()
 }
 
-func (ds BarDaxSrc) StartUp() Err {
-	logs.PushBack("BarDaxSrc#StartUp")
+func (ds BarDaxSrc) SetUp() Err {
+	logs.PushBack("BarDaxSrc#SetUp")
 	return Ok()
 }
 
-func (ds BarDaxSrc) Shutdown() {
-	logs.PushBack("BarDaxSrc#Shutdown")
+func (ds BarDaxSrc) End() {
+	logs.PushBack("BarDaxSrc#End")
 }
 
 func TestAddGlobalDaxSrc(t *testing.T) {
@@ -159,12 +164,12 @@ func TestStartUpGlobalDaxSrcs_and_ShutdownGlobalDaxSrcs(t *testing.T) {
 	assert.Equal(t, len(globalDaxSrcMap), 2)
 
 	elem := logs.Front()
-	if elem.Value == "FooDaxSrc#StartUp" {
-		assert.Equal(t, elem.Value, "FooDaxSrc#StartUp")
-		assert.Equal(t, elem.Next().Value, "BarDaxSrc#StartUp")
+	if elem.Value == "FooDaxSrc#SetUp" {
+		assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+		assert.Equal(t, elem.Next().Value, "BarDaxSrc#SetUp")
 	} else {
-		assert.Equal(t, elem.Value, "BarDaxSrc#StartUp")
-		assert.Equal(t, elem.Next().Value, "FooDaxSrc#StartUp")
+		assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+		assert.Equal(t, elem.Next().Value, "FooDaxSrc#SetUp")
 	}
 	assert.Nil(t, elem.Next().Next())
 
@@ -172,26 +177,26 @@ func TestStartUpGlobalDaxSrcs_and_ShutdownGlobalDaxSrcs(t *testing.T) {
 		ShutdownGlobalDaxSrcs()
 
 		elem = logs.Front()
-		if elem.Value == "FooDaxSrc#StartUp" {
-			assert.Equal(t, elem.Value, "FooDaxSrc#StartUp")
-			assert.Equal(t, elem.Next().Value, "BarDaxSrc#StartUp")
+		if elem.Value == "FooDaxSrc#SetUp" {
+			assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+			assert.Equal(t, elem.Next().Value, "BarDaxSrc#SetUp")
 		} else {
-			assert.Equal(t, elem.Value, "BarDaxSrc#StartUp")
-			assert.Equal(t, elem.Next().Value, "FooDaxSrc#StartUp")
+			assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+			assert.Equal(t, elem.Next().Value, "FooDaxSrc#SetUp")
 		}
 		elem = elem.Next().Next()
-		if elem.Value == "FooDaxSrc#Shutdown" {
-			assert.Equal(t, elem.Value, "FooDaxSrc#Shutdown")
-			assert.Equal(t, elem.Next().Value, "BarDaxSrc#Shutdown")
+		if elem.Value == "FooDaxSrc#End" {
+			assert.Equal(t, elem.Value, "FooDaxSrc#End")
+			assert.Equal(t, elem.Next().Value, "BarDaxSrc#End")
 		} else {
-			assert.Equal(t, elem.Value, "BarDaxSrc#Shutdown")
-			assert.Equal(t, elem.Next().Value, "FooDaxSrc#Shutdown")
+			assert.Equal(t, elem.Value, "BarDaxSrc#End")
+			assert.Equal(t, elem.Next().Value, "FooDaxSrc#End")
 		}
 		assert.Nil(t, elem.Next().Next())
 	}()
 }
 
-func TestDaxBase_AddLocalDaxSrc(t *testing.T) {
+func TestDaxBase_SetUpLocalDaxSrc(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -201,7 +206,8 @@ func TestDaxBase_AddLocalDaxSrc(t *testing.T) {
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 0)
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 1)
@@ -209,7 +215,8 @@ func TestDaxBase_AddLocalDaxSrc(t *testing.T) {
 
 	base.(*daxBaseImpl).isLocalDaxSrcsFixed = true
 
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	err = base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.True(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 1)
@@ -217,14 +224,15 @@ func TestDaxBase_AddLocalDaxSrc(t *testing.T) {
 
 	base.(*daxBaseImpl).isLocalDaxSrcsFixed = false
 
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	err = base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 2)
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 }
 
-func TestDaxBase_RemoveLocalDaxSrc(t *testing.T) {
+func TestDaxBase_FreeLocalDaxSrc(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -234,19 +242,21 @@ func TestDaxBase_RemoveLocalDaxSrc(t *testing.T) {
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 0)
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 1)
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	err = base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 2)
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
-	base.RemoveLocalDaxSrc("bar")
+	base.FreeLocalDaxSrc("bar")
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 1)
@@ -254,7 +264,7 @@ func TestDaxBase_RemoveLocalDaxSrc(t *testing.T) {
 
 	base.(*daxBaseImpl).isLocalDaxSrcsFixed = true
 
-	base.RemoveLocalDaxSrc("foo")
+	base.FreeLocalDaxSrc("foo")
 
 	assert.True(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 1)
@@ -262,7 +272,7 @@ func TestDaxBase_RemoveLocalDaxSrc(t *testing.T) {
 
 	base.(*daxBaseImpl).isLocalDaxSrcsFixed = false
 
-	base.RemoveLocalDaxSrc("foo")
+	base.FreeLocalDaxSrc("foo")
 
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
 	assert.Equal(t, len(base.(*daxBaseImpl).localDaxSrcMap), 0)
@@ -282,7 +292,8 @@ func TestDaxBase_begin(t *testing.T) {
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
 	AddGlobalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.False(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
@@ -299,7 +310,8 @@ func TestDaxBase_begin(t *testing.T) {
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
 	AddGlobalDaxSrc("bar", &BarDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	err = base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.True(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
@@ -316,7 +328,8 @@ func TestDaxBase_begin(t *testing.T) {
 	assert.Equal(t, len(base.(*daxBaseImpl).daxConnMap), 0)
 
 	AddGlobalDaxSrc("bar", &BarDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	err = base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	assert.True(t, isGlobalDaxSrcsFixed)
 	assert.False(t, base.(*daxBaseImpl).isLocalDaxSrcsFixed)
@@ -356,7 +369,8 @@ func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	conn, err = base.GetDaxConn("foo")
 	assert.NotNil(t, conn)
@@ -413,7 +427,7 @@ func TestDaxBase_GetDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
 	AddGlobalDaxSrc("foo", FooDaxSrc{Label: "global"})
 	ShutdownGlobalDaxSrcs()
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{Label: "local"})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{Label: "local"})
 
 	conn, err = base.GetDaxConn("foo")
 	assert.Equal(t, conn.(*FooDaxConn).Label, "local")
@@ -428,7 +442,7 @@ func TestDaxBase_GetDaxConn_failToCreateDaxConn(t *testing.T) {
 	defer func() { WillFailToCreateFooDaxConn = false }()
 
 	base := NewDaxBase()
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
 
 	conn, err := base.GetDaxConn("foo")
 	assert.Nil(t, conn)
@@ -451,8 +465,8 @@ func TestDaxBase_commit(t *testing.T) {
 
 	base := NewDaxBase()
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
 	fooConn, fooErr := base.GetDaxConn("foo")
@@ -466,19 +480,27 @@ func TestDaxBase_commit(t *testing.T) {
 	err := base.commit()
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, logs.Len(), 4)
+	assert.Equal(t, logs.Len(), 6)
 	elem := logs.Front()
+	assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+	elem = elem.Next()
 	assert.Equal(t, elem.Value, "FooDaxSrc#CreateDaxConn")
-	assert.Equal(t, elem.Next().Value, "BarDaxSrc#CreateDaxConn")
-	elem = elem.Next().Next()
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#CreateDaxConn")
+	elem = elem.Next()
 	if elem.Value == "FooDaxConn#Commit" {
 		assert.Equal(t, elem.Value, "FooDaxConn#Commit")
-		assert.Equal(t, elem.Next().Value, "BarDaxConn#Commit")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "BarDaxConn#Commit")
 	} else {
 		assert.Equal(t, elem.Value, "BarDaxConn#Commit")
-		assert.Equal(t, elem.Next().Value, "FooDaxConn#Commit")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "FooDaxConn#Commit")
 	}
-	assert.Nil(t, elem.Next().Next())
+	elem = elem.Next()
+	assert.Nil(t, elem)
 }
 
 func TestDaxBase_commit_failed(t *testing.T) {
@@ -487,8 +509,8 @@ func TestDaxBase_commit_failed(t *testing.T) {
 
 	base := NewDaxBase()
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
 
 	base.begin()
 
@@ -512,12 +534,19 @@ func TestDaxBase_commit_failed(t *testing.T) {
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, logs.Len(), 3)
+	assert.Equal(t, logs.Len(), 5)
 	elem := logs.Front()
+	assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+	elem = elem.Next()
 	assert.Equal(t, elem.Value, "FooDaxSrc#CreateDaxConn")
-	assert.Equal(t, elem.Next().Value, "BarDaxSrc#CreateDaxConn")
-	assert.Equal(t, elem.Next().Next().Value, "BarDaxConn#Commit")
-	assert.Nil(t, elem.Next().Next().Next())
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#CreateDaxConn")
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxConn#Commit")
+	elem = elem.Next()
+	assert.Nil(t, elem)
 }
 
 func TestDaxBase_rollback(t *testing.T) {
@@ -526,8 +555,8 @@ func TestDaxBase_rollback(t *testing.T) {
 
 	base := NewDaxBase()
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
 	fooConn, fooErr := base.GetDaxConn("foo")
@@ -540,19 +569,27 @@ func TestDaxBase_rollback(t *testing.T) {
 
 	base.rollback()
 
-	assert.Equal(t, logs.Len(), 4)
+	assert.Equal(t, logs.Len(), 6)
 	elem := logs.Front()
+	assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+	elem = elem.Next()
 	assert.Equal(t, elem.Value, "FooDaxSrc#CreateDaxConn")
-	assert.Equal(t, elem.Next().Value, "BarDaxSrc#CreateDaxConn")
-	elem = elem.Next().Next()
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#CreateDaxConn")
+	elem = elem.Next()
 	if elem.Value == "FooDaxConn#Rollback" {
 		assert.Equal(t, elem.Value, "FooDaxConn#Rollback")
-		assert.Equal(t, elem.Next().Value, "BarDaxConn#Rollback")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "BarDaxConn#Rollback")
 	} else {
 		assert.Equal(t, elem.Value, "BarDaxConn#Rollback")
-		assert.Equal(t, elem.Next().Value, "FooDaxConn#Rollback")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "FooDaxConn#Rollback")
 	}
-	assert.Nil(t, elem.Next().Next())
+	elem = elem.Next()
+	assert.Nil(t, elem)
 }
 
 func TestDaxBase_close(t *testing.T) {
@@ -561,8 +598,8 @@ func TestDaxBase_close(t *testing.T) {
 
 	base := NewDaxBase()
 
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
 	base.begin()
 
 	fooConn, fooErr := base.GetDaxConn("foo")
@@ -575,18 +612,27 @@ func TestDaxBase_close(t *testing.T) {
 
 	base.end()
 
-	assert.Equal(t, logs.Len(), 4)
+	assert.Equal(t, logs.Len(), 6)
 	elem := logs.Front()
+	assert.Equal(t, elem.Value, "FooDaxSrc#SetUp")
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#SetUp")
+	elem = elem.Next()
 	assert.Equal(t, elem.Value, "FooDaxSrc#CreateDaxConn")
-	assert.Equal(t, elem.Next().Value, "BarDaxSrc#CreateDaxConn")
-	elem = elem.Next().Next()
+	elem = elem.Next()
+	assert.Equal(t, elem.Value, "BarDaxSrc#CreateDaxConn")
+	elem = elem.Next()
 	if elem.Value == "FooDaxConn#Close" {
 		assert.Equal(t, elem.Value, "FooDaxConn#Close")
-		assert.Equal(t, elem.Next().Value, "BarDaxConn#Close")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "BarDaxConn#Close")
 	} else {
 		assert.Equal(t, elem.Value, "BarDaxConn#Close")
-		assert.Equal(t, elem.Next().Value, "FooDaxConn#Close")
+		elem = elem.Next()
+		assert.Equal(t, elem.Value, "FooDaxConn#Close")
 	}
+	elem = elem.Next()
+	assert.Nil(t, elem)
 }
 
 type FooDax struct {
@@ -626,8 +672,8 @@ func TestDax_GetXxxConn(t *testing.T) {
 	defer ClearDaxBase()
 
 	base := NewDaxBase()
-	base.AddLocalDaxSrc("foo", FooDaxSrc{})
-	base.AddLocalDaxSrc("bar", &BarDaxSrc{})
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
 
 	base.begin()
 
