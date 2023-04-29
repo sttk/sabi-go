@@ -7,6 +7,8 @@ A small framework to separate logics and data accesses for Golang application.
 Sabi is a small framework for Golang applications.
 This framework separates an application to logic parts and data access parts, and enables to implement each of them independently, then to combine them.
 
+### Separation of logics and data accesses
+
 In general, a program consists of procedures and data.
 And procedures include data accesses for operating data, and the rest of procedures are logics.
 So we can say that a program consists of logics, data accesses and data.
@@ -16,6 +18,15 @@ The logic and data access mentioned in this framework are partially matched thos
 For example, in the controller layer, there are input data and output data. (In a web application there are request data and response data, and in a command line application there are console input and output.)
 Even though all logical processes are moved into the application logic layer, it is remained to transform input data of the controller layer into input data of the application logic layer, and to transform output data of the application logic layer into the output data of the controller layer.
 The data accesses mentioned in this framework also includes those data accesses.
+
+### Changes composition of data access methods by concerns
+
+Dax is a collection of data access methods. These methods will be collected/divided by data source from an implementation perspective. On the other hand, they will be collected/divided by logic from a usage perspective
+
+In general programming, a developer chooses the necessary methods for their logic from among all available methods. And after programming, those methods will be buried in the program code of the logic, and it will become unclear which methods are used without tracing the logic.
+
+In applications using the Sabi framework, a logic is implemented as a function that takes only one argument, a dax interface. And this interface can define only the methods required by the logic.
+Therefore, a dax interface can make clear which methods are used in a logic. And also, a dax interface can constraint methods available for a logic.
 
 
 ## Usage
