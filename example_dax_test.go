@@ -65,9 +65,9 @@ func ExampleStartUpGlobalDaxSrcs() {
 	sabi.ClearDaxBase()
 }
 
-func ExampleDaxBase_AddLocalDaxSrc() {
+func ExampleDaxBase_SetUpLocalDaxSrc() {
 	base := sabi.NewDaxBase()
-	base.AddLocalDaxSrc("hoge", NewMapDaxSrc())
+	base.SetUpLocalDaxSrc("hoge", NewMapDaxSrc())
 
 	type MyDax struct {
 		sabi.Dax
@@ -140,8 +140,8 @@ func ExampleDax() {
 	fugaDs := NewMapDaxSrc()
 
 	base := sabi.NewDaxBase()
-	base.AddLocalDaxSrc("hoge", hogeDs)
-	base.AddLocalDaxSrc("fuga", fugaDs)
+	base.SetUpLocalDaxSrc("hoge", hogeDs)
+	base.SetUpLocalDaxSrc("fuga", fugaDs)
 
 	base = struct {
 		sabi.DaxBase

@@ -20,11 +20,11 @@ func (ds MapDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return &MapDaxConn{dataMap: ds.dataMap}, sabi.Ok()
 }
 
-func (ds MapDaxSrc) StartUp() sabi.Err {
+func (ds MapDaxSrc) SetUp() sabi.Err {
 	return sabi.Ok()
 }
 
-func (ds MapDaxSrc) Shutdown() {
+func (ds MapDaxSrc) End() {
 }
 
 //// MapDaxConn
@@ -190,9 +190,9 @@ func TestDax_runTxn(t *testing.T) {
 	piyoDs := NewMapDaxSrc()
 
 	base := NewHogeFugaPiyoDaxBase()
-	base.AddLocalDaxSrc("hoge", hogeDs)
-	base.AddLocalDaxSrc("fuga", fugaDs)
-	base.AddLocalDaxSrc("piyo", piyoDs)
+	base.SetUpLocalDaxSrc("hoge", hogeDs)
+	base.SetUpLocalDaxSrc("fuga", fugaDs)
+	base.SetUpLocalDaxSrc("piyo", piyoDs)
 
 	hogeDs.dataMap["hogehoge"] = "Hello, world"
 
