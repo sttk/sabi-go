@@ -9,6 +9,11 @@ import (
 func ExampleAddGlobalDaxSrc() {
 	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
 
+	if sabi.StartUpGlobalDaxSrcs().IsNotOk() {
+		return
+	}
+	defer sabi.ShutdownGlobalDaxSrcs()
+
 	base := sabi.NewDaxBase()
 
 	type MyDax struct {
@@ -22,16 +27,16 @@ func ExampleAddGlobalDaxSrc() {
 	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.MapDaxConn
+	// conn = sabi_test.MapDaxConn
 	// err.IsOk() = true
 
-	sabi.ClearDaxBase()
+	ClearDaxBase()
 }
 
 func ExampleStartUpGlobalDaxSrcs() {
 	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
 
-	if err := sabi.StartUpGlobalDaxSrcs(); !err.IsOk() {
+	if err := sabi.StartUpGlobalDaxSrcs(); err.IsNotOk() {
 		return
 	}
 	defer sabi.ShutdownGlobalDaxSrcs()
@@ -56,17 +61,19 @@ func ExampleStartUpGlobalDaxSrcs() {
 	fmt.Printf("err.Error() = %s\n", err.Error())
 
 	// Output:
-	// conn = *sabi_test.MapDaxConn
+	// conn = sabi_test.MapDaxConn
 	// err.IsOk() = true
 	// conn = <nil>
 	// err.IsOk() = false
 	// err.Error() = {reason=DaxSrcIsNotFound, Name=fuga}
 
-	sabi.ClearDaxBase()
+	ClearDaxBase()
 }
 
 func ExampleDaxBase_SetUpLocalDaxSrc() {
 	base := sabi.NewDaxBase()
+	defer base.FreeAllLocalDaxSrcs()
+
 	base.SetUpLocalDaxSrc("hoge", NewMapDaxSrc())
 
 	type MyDax struct {
@@ -80,10 +87,10 @@ func ExampleDaxBase_SetUpLocalDaxSrc() {
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
 	// Output:
-	// conn = *sabi_test.MapDaxConn
+	// conn = sabi_test.MapDaxConn
 	// err.IsOk() = true
 
-	sabi.ClearDaxBase()
+	ClearDaxBase()
 }
 
 type GettingDax struct {
@@ -95,7 +102,7 @@ func (dax GettingDax) GetData() (string, sabi.Err) {
 	if !err.IsOk() {
 		return "", err
 	}
-	data := conn.(*MapDaxConn).dataMap["hogehoge"]
+	data := conn.(MapDaxConn).dataMap["hogehoge"]
 	return data, err
 }
 
@@ -108,7 +115,7 @@ func (dax SettingDax) SetData(data string) sabi.Err {
 	if !err.IsOk() {
 		return err
 	}
-	conn.(*MapDaxConn).dataMap["fugafuga"] = data
+	conn.(MapDaxConn).dataMap["fugafuga"] = data
 	return err
 }
 
@@ -121,7 +128,7 @@ func ExampleDax() {
 	//   if !err.IsOk() {
 	//     return nil, err
 	//   }
-	//   return conn.dataMap["hogehoge"], err
+	//   return conn.(MapDaxConn).dataMap["hogehoge"], err
 	// }
 	//
 	// type SettingDax struct {
@@ -132,7 +139,7 @@ func ExampleDax() {
 	//   if !err.IsOk() {
 	//     return nil, err
 	//   }
-	//   conn.dataMap["fugafuga"] = data
+	//   conn.(MapDaxConn).dataMap["fugafuga"] = data
 	//   return err
 	// }
 
@@ -140,8 +147,14 @@ func ExampleDax() {
 	fugaDs := NewMapDaxSrc()
 
 	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("hoge", hogeDs)
-	base.SetUpLocalDaxSrc("fuga", fugaDs)
+	defer base.FreeAllLocalDaxSrcs()
+
+	if err := base.SetUpLocalDaxSrc("hoge", hogeDs); err.IsNotOk() {
+		return
+	}
+	if err := base.SetUpLocalDaxSrc("fuga", fugaDs); err.IsNotOk() {
+		return
+	}
 
 	base = struct {
 		sabi.DaxBase
