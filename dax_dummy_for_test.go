@@ -86,20 +86,6 @@ func (ds FooDaxSrc) End() {
 	Logs.PushBack("FooDaxSrc#End")
 }
 
-// FooDax
-
-type FooDax struct {
-	sabi.Dax
-}
-
-func (dax FooDax) GetFooData() (string, sabi.Err) {
-	conn, err := dax.GetDaxConn("foo")
-	if err.IsNotOk() {
-		return "", err
-	}
-	return conn.(FooDaxConn).Map["data"], err
-}
-
 // BarDaxConn
 
 type BarDaxConn struct {
