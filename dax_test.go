@@ -646,7 +646,7 @@ func TestDaxBase_GetDaxConn_rollback(t *testing.T) {
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_GetDaxConn_close(t *testing.T) {
+func TestDaxBase_GetDaxConn_end(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 

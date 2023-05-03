@@ -104,7 +104,7 @@ func AddGlobalDaxSrc(name string, ds DaxSrc) {
 // and to make available the registered global dax sources by calling Setup
 // method of each DaxSrc.
 // If even one DaxSrc fail to execute its SstUp method, this function
-// executes Release methods of all global DaxSrc(s) and returns sabi.Err.
+// executes Free methods of all global DaxSrc(s) and returns sabi.Err.
 func StartUpGlobalDaxSrcs() Err {
 	isGlobalDaxSrcsFixed = true
 
