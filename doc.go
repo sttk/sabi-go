@@ -87,7 +87,7 @@ And the following code is an example of a test case.
 		assert.Equal(t, m["greeting"], "Hello, World")
 	}
 
-# Dac for real data accesses
+# Dax for real data accesses
 
 In actual case, multiple data sources are often used.
 In this example, an user name is input as command line argument, and greeting is output to standard output (console output).
@@ -155,10 +155,10 @@ sabi.RunTxn executes the GreetLogic function in a transaction process.
 # Moving outputs to another transaction process
 
 sabi.RunTxn executes logic functions in a transaction. If a logic function updates database and causes an error in the transaction, its update is rollbacked.
-If console output is executed in the same transaction with database update, the rollbacked result can be output to console.
+If console output is executed in the same transaction with database update, the rollbacked result is possible to be output to console.
 Therefore, console output is wanted to execute after the transaction of database update is successfully completed.
 
-What should be done to achieve it are to add a dax interface for next transaction, to change ConsoleOutputDax to hold greeting text in Say method and add a new method to output it in next transaction, and to execute the next transaction in the main function.
+What should be done to achieve it are to add a dax interface for next transaction, to change ConsoleOutputDax to hold a greeting text in Say method, to add a new method to output it in next transaction, and to execute the next transaction in the main function.
 
 	type PrintDax interface {  // Added.
 		Print() sabi.Err
