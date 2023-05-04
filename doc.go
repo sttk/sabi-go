@@ -87,7 +87,7 @@ And the following code is an example of a test case.
 		assert.Equal(t, m["greeting"], "Hello, World")
 	}
 
-# Dac for real data accesses
+# Dax for real data accesses
 
 In actual case, multiple data sources are often used.
 In this example, an user name is input as command line argument, and greeting is output to standard output (console output).
