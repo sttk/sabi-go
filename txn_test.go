@@ -23,8 +23,8 @@ func TestRunTxn(t *testing.T) {
 		BGetSetDax
 	}{
 		DaxBase:    base,
-		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
-		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+		AGetDax:    AGetDax{Dax: base},
+		BGetSetDax: BGetSetDax{Dax: base},
 	}
 
 	aDs := NewADaxSrc()
@@ -90,8 +90,8 @@ func TestRunTxn_failToCreateDaxConn(t *testing.T) {
 		BGetSetDax
 	}{
 		DaxBase:    base,
-		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
-		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+		AGetDax:    AGetDax{Dax: base},
+		BGetSetDax: BGetSetDax{Dax: base},
 	}
 
 	aDs := NewADaxSrc()
@@ -150,8 +150,8 @@ func TestRunTxn_failToCommitDaxConn(t *testing.T) {
 		BGetSetDax
 	}{
 		DaxBase:    base,
-		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
-		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+		AGetDax:    AGetDax{Dax: base},
+		BGetSetDax: BGetSetDax{Dax: base},
 	}
 
 	aDs := NewADaxSrc()
@@ -232,8 +232,8 @@ func TestRunTxn_Run_errorInLogic(t *testing.T) {
 		BGetSetDax
 	}{
 		DaxBase:    base,
-		AGetDax:    AGetDax{ADax: ADax{Dax: base}},
-		BGetSetDax: BGetSetDax{BDax: BDax{Dax: base}},
+		AGetDax:    AGetDax{Dax: base},
+		BGetSetDax: BGetSetDax{Dax: base},
 	}
 
 	aDs := NewADaxSrc()

@@ -93,16 +93,16 @@ type BarDaxConn struct {
 	Map   map[string]string
 }
 
-func (conn BarDaxConn) Commit() sabi.Err {
+func (conn *BarDaxConn) Commit() sabi.Err {
 	Logs.PushBack("BarDaxConn#Commit")
 	return sabi.Ok()
 }
 
-func (conn BarDaxConn) Rollback() {
+func (conn *BarDaxConn) Rollback() {
 	Logs.PushBack("BarDaxConn#Rollback")
 }
 
-func (conn BarDaxConn) Close() {
+func (conn *BarDaxConn) Close() {
 	Logs.PushBack("BarDaxConn#Close")
 }
 
@@ -114,7 +114,7 @@ type BarDaxSrc struct {
 
 func (ds BarDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	Logs.PushBack("BarDaxSrc#CreateDaxConn")
-	return BarDaxConn{Label: ds.Label, Map: make(map[string]string)}, sabi.Ok()
+	return &BarDaxConn{Label: ds.Label, Map: make(map[string]string)}, sabi.Ok()
 }
 
 func (ds BarDaxSrc) SetUp() sabi.Err {
@@ -163,24 +163,6 @@ func (conn MapDaxConn) Rollback() {
 func (conn MapDaxConn) Close() {
 }
 
-// MapDax
-
-type MapDax struct {
-	sabi.Dax
-}
-
-func NewMapDax(base sabi.DaxBase) MapDax {
-	return MapDax{Dax: base}
-}
-
-func (dax MapDax) GetMapDaxConn(name string) (MapDaxConn, sabi.Err) {
-	conn, err := dax.GetDaxConn(name)
-	if err.IsNotOk() {
-		return MapDaxConn{}, err
-	}
-	return conn.(MapDaxConn), err
-}
-
 // HogeFugaDax
 
 type HogeFugaDax interface {
@@ -220,11 +202,11 @@ func FugaPiyoLogic(dax FugaPiyoDax) sabi.Err {
 // HogeDax
 
 type HogeDax struct {
-	MapDax
+	sabi.Dax
 }
 
 func (dax HogeDax) GetHogeData() (string, sabi.Err) {
-	conn, err := dax.GetMapDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	if err.IsNotOk() {
 		return "", err
 	}
@@ -233,7 +215,7 @@ func (dax HogeDax) GetHogeData() (string, sabi.Err) {
 }
 
 func (dax HogeDax) SetHogeData(data string) sabi.Err {
-	conn, err := dax.GetMapDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	if err.IsNotOk() {
 		return err
 	}
@@ -244,11 +226,11 @@ func (dax HogeDax) SetHogeData(data string) sabi.Err {
 // FugaDax
 
 type FugaDax struct {
-	MapDax
+	sabi.Dax
 }
 
 func (dax FugaDax) GetFugaData() (string, sabi.Err) {
-	conn, err := dax.GetMapDaxConn("fuga")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "fuga")
 	if err.IsNotOk() {
 		return "", err
 	}
@@ -257,7 +239,7 @@ func (dax FugaDax) GetFugaData() (string, sabi.Err) {
 }
 
 func (dax FugaDax) SetFugaData(data string) sabi.Err {
-	conn, err := dax.GetMapDaxConn("fuga")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "fuga")
 	if err.IsNotOk() {
 		return err
 	}
@@ -268,11 +250,11 @@ func (dax FugaDax) SetFugaData(data string) sabi.Err {
 // PiyoDax
 
 type PiyoDax struct {
-	MapDax
+	sabi.Dax
 }
 
 func (dax PiyoDax) GetPiyoData() (string, sabi.Err) {
-	conn, err := dax.GetMapDaxConn("piyo")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "piyo")
 	if err.IsNotOk() {
 		return "", err
 	}
@@ -281,7 +263,7 @@ func (dax PiyoDax) GetPiyoData() (string, sabi.Err) {
 }
 
 func (dax PiyoDax) SetPiyoData(data string) sabi.Err {
-	conn, err := dax.GetMapDaxConn("piyo")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "piyo")
 	if err.IsNotOk() {
 		return err
 	}
@@ -300,9 +282,9 @@ func NewHogeFugaPiyoDaxBase() sabi.DaxBase {
 		PiyoDax
 	}{
 		DaxBase: base,
-		HogeDax: HogeDax{MapDax: NewMapDax(base)},
-		FugaDax: FugaDax{MapDax: NewMapDax(base)},
-		PiyoDax: PiyoDax{MapDax: NewMapDax(base)},
+		HogeDax: HogeDax{Dax: base},
+		FugaDax: FugaDax{Dax: base},
+		PiyoDax: PiyoDax{Dax: base},
 	}
 }
 
@@ -344,20 +326,6 @@ func (conn ADaxConn) Rollback() {
 
 func (conn ADaxConn) Close() {
 	Logs.PushBack("ADaxConn#Close")
-}
-
-// ADax
-
-type ADax struct {
-	sabi.Dax
-}
-
-func (dax ADax) GetADaxConn(name string) (ADaxConn, sabi.Err) {
-	conn, err := dax.GetDaxConn(name)
-	if err.IsNotOk() {
-		return ADaxConn{}, err
-	}
-	return conn.(ADaxConn), err
 }
 
 // BDaxSrc
@@ -406,20 +374,6 @@ func (conn BDaxConn) Close() {
 	Logs.PushBack("BDaxConn#Close")
 }
 
-// BDax
-
-type BDax struct {
-	sabi.Dax
-}
-
-func (dax BDax) GetBDaxConn(name string) (BDaxConn, sabi.Err) {
-	conn, err := dax.GetDaxConn(name)
-	if err.IsNotOk() {
-		return BDaxConn{}, err
-	}
-	return conn.(BDaxConn), err
-}
-
 // CDaxSrc
 
 type CDaxSrc struct {
@@ -460,28 +414,14 @@ func (conn CDaxConn) Close() {
 	Logs.PushBack("CDaxConn#Close")
 }
 
-// CDax
-
-type CDax struct {
-	sabi.Dax
-}
-
-func (dax CDax) GetCDaxConn(name string) (CDaxConn, sabi.Err) {
-	conn, err := dax.GetDaxConn(name)
-	if err.IsNotOk() {
-		return CDaxConn{}, err
-	}
-	return conn.(CDaxConn), err
-}
-
 // AGetDax
 
 type AGetDax struct {
-	ADax
+	sabi.Dax
 }
 
 func (dax AGetDax) GetAData() (string, sabi.Err) {
-	conn, err := dax.GetADaxConn("aaa")
+	conn, err := sabi.GetDaxConn[ADaxConn](dax, "aaa")
 	if !err.IsOk() {
 		return "", err
 	}
@@ -492,11 +432,11 @@ func (dax AGetDax) GetAData() (string, sabi.Err) {
 // BGetSetDax
 
 type BGetSetDax struct {
-	BDax
+	sabi.Dax
 }
 
 func (dax BGetSetDax) GetBData() (string, sabi.Err) {
-	conn, err := dax.GetBDaxConn("bbb")
+	conn, err := sabi.GetDaxConn[BDaxConn](dax, "bbb")
 	if !err.IsOk() {
 		return "", err
 	}
@@ -505,7 +445,7 @@ func (dax BGetSetDax) GetBData() (string, sabi.Err) {
 }
 
 func (dax BGetSetDax) SetBData(data string) sabi.Err {
-	conn, err := dax.GetBDaxConn("bbb")
+	conn, err := sabi.GetDaxConn[BDaxConn](dax, "bbb")
 	if !err.IsOk() {
 		return err
 	}
@@ -516,11 +456,11 @@ func (dax BGetSetDax) SetBData(data string) sabi.Err {
 // CSetDax
 
 type CSetDax struct {
-	CDax
+	sabi.Dax
 }
 
 func (dax CSetDax) SetCData(data string) sabi.Err {
-	conn, err := dax.GetCDaxConn("ccc")
+	conn, err := sabi.GetDaxConn[CDaxConn](dax, "ccc")
 	if !err.IsOk() {
 		return err
 	}

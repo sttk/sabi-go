@@ -22,7 +22,7 @@ func ExampleAddGlobalDaxSrc() {
 
 	dax := MyDax{Dax: base}
 
-	conn, err := dax.GetDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
 
@@ -51,11 +51,11 @@ func ExampleStartUpGlobalDaxSrcs() {
 
 	dax := MyDax{Dax: base}
 
-	conn, err := dax.GetDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
-	conn, err = dax.GetDaxConn("fuga")
+	conn, err = sabi.GetDaxConn[MapDaxConn](dax, "fuga")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
 	fmt.Printf("err.Error() = %s\n", err.Error())
@@ -63,7 +63,7 @@ func ExampleStartUpGlobalDaxSrcs() {
 	// Output:
 	// conn = sabi_test.MapDaxConn
 	// err.IsOk() = true
-	// conn = <nil>
+	// conn = sabi_test.MapDaxConn
 	// err.IsOk() = false
 	// err.Error() = {reason=DaxSrcIsNotFound, Name=fuga}
 
@@ -82,7 +82,7 @@ func ExampleDaxBase_SetUpLocalDaxSrc() {
 
 	dax := MyDax{Dax: base}
 
-	conn, err := dax.GetDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 
@@ -98,11 +98,11 @@ type GettingDax struct {
 }
 
 func (dax GettingDax) GetData() (string, sabi.Err) {
-	conn, err := dax.GetDaxConn("hoge")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
 	if !err.IsOk() {
 		return "", err
 	}
-	data := conn.(MapDaxConn).dataMap["hogehoge"]
+	data := conn.dataMap["hogehoge"]
 	return data, err
 }
 
@@ -111,11 +111,11 @@ type SettingDax struct {
 }
 
 func (dax SettingDax) SetData(data string) sabi.Err {
-	conn, err := dax.GetDaxConn("fuga")
+	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "fuga")
 	if !err.IsOk() {
 		return err
 	}
-	conn.(MapDaxConn).dataMap["fugafuga"] = data
+	conn.dataMap["fugafuga"] = data
 	return err
 }
 
@@ -124,7 +124,7 @@ func ExampleDax() {
 	//   sabi.Dax
 	// }
 	// func (dax GettingDax) GetData() (string, sabi.Err) {
-	//   conn, err := dax.GetDaxConn("hoge")
+	//   conn, err := dax.getDaxConn("hoge")
 	//   if !err.IsOk() {
 	//     return nil, err
 	//   }
@@ -135,7 +135,7 @@ func ExampleDax() {
 	//   sabi.Dax
 	// }
 	// func (dax SettingDax) SetData(data string) sabi.Err {
-	//   conn, err := dax.GetDaxConn("fuga")
+	//   conn, err := dax.getDaxConn("fuga")
 	//   if !err.IsOk() {
 	//     return nil, err
 	//   }
