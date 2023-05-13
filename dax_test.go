@@ -770,7 +770,7 @@ func TestGetDaxConn_whenDaxConnIsValueButError(t *testing.T) {
 
 	base := sabi.NewDaxBase()
 	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	conn, err := sabi.GetDaxConn[BarDaxConn](base, "foo")
+	conn, err := sabi.GetDaxConn[*BarDaxConn](base, "foo")
 	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
 	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
@@ -778,8 +778,8 @@ func TestGetDaxConn_whenDaxConnIsValueButError(t *testing.T) {
 	assert.Equal(t, err.Get("FromType"),
 		"FooDaxConn (github.com/sttk-go/sabi_test)")
 	assert.Equal(t, err.Get("ToType"),
-		"BarDaxConn (github.com/sttk-go/sabi_test)")
-	assert.NotNil(t, conn)
+		"*BarDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Nil(t, conn)
 }
 
 func TestGetDaxConn_whenDaxConnIsValueButPointer(t *testing.T) {
@@ -830,6 +830,7 @@ func TestGetDaxConn_whenDaxConnIsPointerButError(t *testing.T) {
 	assert.Nil(t, conn)
 }
 
+/* Raise compile error
 func TestGetDaxConn_whenDaxConnIsPointerButValue(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
@@ -847,6 +848,7 @@ func TestGetDaxConn_whenDaxConnIsPointerButValue(t *testing.T) {
 		"BarDaxConn (github.com/sttk-go/sabi_test)")
 	assert.NotNil(t, conn)
 }
+*/
 
 func TestGetDaxConn_whenDaxConnIsNotFound(t *testing.T) {
 	ClearDaxBase()
