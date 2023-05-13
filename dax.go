@@ -352,7 +352,7 @@ func (base *daxBaseImpl) end() {
 // GetDaxConn is a function to cast type of DaxConn instance.
 // If it's failed to cast to a destination type, this function returns an Err
 // of a reason: FailToGetDaxConn.
-func GetDaxConn[C any](dax Dax, name string) (C, Err) {
+func GetDaxConn[C DaxConn](dax Dax, name string) (C, Err) {
 	conn, err := dax.getDaxConn(name)
 	if err.IsOk() {
 		casted, ok := conn.(C)
