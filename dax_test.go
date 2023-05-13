@@ -1,6 +1,7 @@
 package sabi_test
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/sttk-go/sabi"
 	"testing"
@@ -389,8 +390,7 @@ func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
 
 	base := sabi.NewDaxBase()
 
-	conn, err := base.GetDaxConn("foo")
-	assert.Nil(t, conn)
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
 	switch err.Reason().(type) {
 	case sabi.DaxSrcIsNotFound:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -400,8 +400,7 @@ func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
 
 	err = sabi.StartUpGlobalDaxSrcs()
 
-	conn, err = base.GetDaxConn("foo")
-	assert.Nil(t, conn)
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	switch err.Reason().(type) {
 	case sabi.DaxSrcIsNotFound:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -411,24 +410,23 @@ func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
 
 	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
 
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
 	var conn2 sabi.DaxConn
-	conn2, err = base.GetDaxConn("foo")
+	conn2, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.Equal(t, conn2, conn)
 	assert.True(t, err.IsOk())
 }
 
-func TestDaxBase_GetDaxConn_withGlobalDaxSrc(t *testing.T) {
+func TestDaxBase_getDaxConn_withGlobalDaxSrc(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
 	base := sabi.NewDaxBase()
 
-	conn, err := base.GetDaxConn("foo")
-	assert.Nil(t, conn)
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
 	switch err.Reason().(type) {
 	case sabi.DaxSrcIsNotFound:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -439,24 +437,23 @@ func TestDaxBase_GetDaxConn_withGlobalDaxSrc(t *testing.T) {
 	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
 
 	err = sabi.StartUpGlobalDaxSrcs()
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
 	var conn2 sabi.DaxConn
-	conn2, err = base.GetDaxConn("foo")
+	conn2, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.Equal(t, conn2, conn)
 	assert.True(t, err.IsOk())
 }
 
-func TestDaxBase_GetDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
+func TestDaxBase_getDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
 	base := sabi.NewDaxBase()
 
-	conn, err := base.GetDaxConn("foo")
-	assert.Nil(t, conn)
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
 	switch err.Reason().(type) {
 	case sabi.DaxSrcIsNotFound:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -472,12 +469,12 @@ func TestDaxBase_GetDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
 	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{Label: "local"})
 	assert.True(t, err.IsOk())
 
-	conn, err = base.GetDaxConn("foo")
-	assert.Equal(t, conn.(FooDaxConn).Label, "local")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
+	assert.Equal(t, conn.Label, "local")
 	assert.True(t, err.IsOk())
 }
 
-func TestDaxBase_GetDaxConn_failToCreateDaxConn(t *testing.T) {
+func TestDaxBase_getDaxConn_failToCreateDaxConn(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -487,9 +484,7 @@ func TestDaxBase_GetDaxConn_failToCreateDaxConn(t *testing.T) {
 
 	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
 
-	var conn sabi.DaxConn
-	conn, err = base.GetDaxConn("foo")
-	assert.Nil(t, conn)
+	_, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	switch err.Reason().(type) {
 	case sabi.FailToCreateDaxConn:
 		assert.Equal(t, err.Get("Name"), "foo")
@@ -503,7 +498,7 @@ func TestDaxBase_GetDaxConn_failToCreateDaxConn(t *testing.T) {
 	}
 }
 
-func TestDaxBase_GetDaxConn_commit(t *testing.T) {
+func TestDaxBase_getDaxConn_commit(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -518,11 +513,11 @@ func TestDaxBase_GetDaxConn_commit(t *testing.T) {
 	sabi.Begin(base)
 
 	var conn sabi.DaxConn
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
-	conn, err = base.GetDaxConn("bar")
+	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
@@ -551,7 +546,7 @@ func TestDaxBase_GetDaxConn_commit(t *testing.T) {
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_GetDaxConn_failToCommit(t *testing.T) {
+func TestDaxBase_getDaxConn_failToCommit(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -568,11 +563,11 @@ func TestDaxBase_GetDaxConn_failToCommit(t *testing.T) {
 	sabi.Begin(base)
 
 	var conn sabi.DaxConn
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
-	conn, err = base.GetDaxConn("bar")
+	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
@@ -600,7 +595,7 @@ func TestDaxBase_GetDaxConn_failToCommit(t *testing.T) {
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_GetDaxConn_rollback(t *testing.T) {
+func TestDaxBase_getDaxConn_rollback(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -614,11 +609,11 @@ func TestDaxBase_GetDaxConn_rollback(t *testing.T) {
 	sabi.Begin(base)
 
 	var conn sabi.DaxConn
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
-	conn, err = base.GetDaxConn("bar")
+	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
@@ -646,7 +641,7 @@ func TestDaxBase_GetDaxConn_rollback(t *testing.T) {
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_GetDaxConn_end(t *testing.T) {
+func TestDaxBase_getDaxConn_end(t *testing.T) {
 	ClearDaxBase()
 	defer ClearDaxBase()
 
@@ -661,11 +656,11 @@ func TestDaxBase_GetDaxConn_end(t *testing.T) {
 	sabi.Begin(base)
 
 	var conn sabi.DaxConn
-	conn, err = base.GetDaxConn("foo")
+	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
-	conn, err = base.GetDaxConn("bar")
+	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
 	assert.NotNil(t, conn)
 	assert.True(t, err.IsOk())
 
@@ -755,4 +750,129 @@ func TestDax_runTxn(t *testing.T) {
 	}
 
 	assert.Equal(t, piyoDs.dataMap["piyopiyo"], "Hello, world")
+}
+
+func TestGetDaxConn_whenDaxConnIsValue(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
+	assert.True(t, err.IsOk())
+	assert.NotNil(t, conn)
+	assert.Equal(t, fmt.Sprintf("%T", conn), "sabi_test.FooDaxConn")
+}
+
+func TestGetDaxConn_whenDaxConnIsValueButError(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	conn, err := sabi.GetDaxConn[BarDaxConn](base, "foo")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "foo")
+	assert.Equal(t, err.Get("FromType"),
+		"FooDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Equal(t, err.Get("ToType"),
+		"BarDaxConn (github.com/sttk-go/sabi_test)")
+	assert.NotNil(t, conn)
+}
+
+func TestGetDaxConn_whenDaxConnIsValueButPointer(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	conn, err := sabi.GetDaxConn[*FooDaxConn](base, "foo")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "foo")
+	assert.Equal(t, err.Get("FromType"),
+		"FooDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Equal(t, err.Get("ToType"),
+		"*FooDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Nil(t, conn)
+}
+
+func TestGetDaxConn_whenDaxConnIsPointer(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
+	conn, err := sabi.GetDaxConn[*BarDaxConn](base, "bar")
+	assert.True(t, err.IsOk())
+	assert.NotNil(t, conn)
+	assert.Equal(t, fmt.Sprintf("%T", conn), "*sabi_test.BarDaxConn")
+}
+
+func TestGetDaxConn_whenDaxConnIsPointerButError(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
+	conn, err := sabi.GetDaxConn[*FooDaxConn](base, "bar")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "bar")
+	assert.Equal(t, err.Get("FromType"),
+		"*BarDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Equal(t, err.Get("ToType"),
+		"*FooDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Nil(t, conn)
+}
+
+func TestGetDaxConn_whenDaxConnIsPointerButValue(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
+	conn, err := sabi.GetDaxConn[BarDaxConn](base, "bar")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "bar")
+	assert.Equal(t, err.Get("FromType"),
+		"*BarDaxConn (github.com/sttk-go/sabi_test)")
+	assert.Equal(t, err.Get("ToType"),
+		"BarDaxConn (github.com/sttk-go/sabi_test)")
+	assert.NotNil(t, conn)
+}
+
+func TestGetDaxConn_whenDaxConnIsNotFound(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	base := sabi.NewDaxBase()
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "DaxSrcIsNotFound")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "foo")
+	assert.NotNil(t, conn)
+}
+
+func TestGetDaxConn_whenDaxConnIsFailedToCreate(t *testing.T) {
+	ClearDaxBase()
+	defer ClearDaxBase()
+
+	WillFailToCreateFooDaxConn = true
+
+	base := sabi.NewDaxBase()
+	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
+	assert.True(t, err.IsNotOk())
+	assert.Equal(t, err.ReasonName(), "FailToCreateDaxConn")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi")
+	assert.Equal(t, err.Get("Name"), "foo")
+	assert.NotNil(t, conn)
 }

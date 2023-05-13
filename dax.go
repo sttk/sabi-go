@@ -5,6 +5,7 @@
 package sabi
 
 import (
+	"reflect"
 	"sync"
 )
 
@@ -25,12 +26,21 @@ type /* error reasons */ (
 		Name string
 	}
 
-	// FailToCreateDaxConn is an error reason which indicates that it failed to
+	// FailToCreateDaxConn is an error reason which indicates that it's failed to
 	// create a new connection to a data store.
 	// The field: Name is a registered name of a DaxSrc which failed to create a
 	// DaxConn.
 	FailToCreateDaxConn struct {
 		Name string
+	}
+
+	// FailToCastConn is an error reason which indicates that it's failed to
+	// cast type of a DaxConn.
+	// The field: Name is a registered name of a DaxSrc which created to a target
+	// DaxConn.
+	// And the field: Type is a destination type name.
+	FailToCastDaxConn struct {
+		Name, FromType, ToType string
 	}
 
 	// FailToCommitDaxConn is an error reason which indicates that some
@@ -65,7 +75,6 @@ type DaxSrc interface {
 }
 
 // Dax is an interface for a set of data access methods.
-// This interface defines a method: GetDaxConn.
 // This method gets a DaxConn which is a connection to a data store by
 // specified name.
 // If a DaxConn is found, this method returns it, but not found, creates a new
@@ -73,7 +82,7 @@ type DaxSrc interface {
 // If there are both local and global DaxSrc with same name, the local DaxSrc
 // is used.
 type Dax interface {
-	GetDaxConn(name string) (DaxConn, Err)
+	getDaxConn(name string) (DaxConn, Err)
 }
 
 var (
@@ -162,8 +171,8 @@ func ShutdownGlobalDaxSrcs() {
 // In addition, this method ignores to add local DaxSrc(s) while the
 // transaction is processing.
 //
-// This interface inherits Dax interface, so this has GetDaxConn method, too.
-// Also this has unexported methods for a transaction process.
+// This interface inherits Dax interface to get a DaxConn by a name.
+// Also, this has unexported methods for a transaction process.
 type DaxBase interface {
 	Dax
 	SetUpLocalDaxSrc(name string, ds DaxSrc) Err
@@ -235,7 +244,7 @@ func (base *daxBaseImpl) FreeAllLocalDaxSrcs() {
 	}
 }
 
-func (base *daxBaseImpl) GetDaxConn(name string) (DaxConn, Err) {
+func (base *daxBaseImpl) getDaxConn(name string) (DaxConn, Err) {
 	conn := base.daxConnMap[name]
 	if conn != nil {
 		return conn, Ok()
@@ -337,4 +346,38 @@ func (base *daxBaseImpl) end() {
 	wg.Wait()
 
 	base.isLocalDaxSrcsFixed = false
+}
+
+// GetDaxConn is a function to cast type of DaxConn instance.
+// If it's failed to cast to a destination type, this function returns an Err
+// of a reason: FailToGetDaxConn.
+func GetDaxConn[C any](dax Dax, name string) (C, Err) {
+	conn, err := dax.getDaxConn(name)
+	if err.IsOk() {
+		casted, ok := conn.(C)
+		if ok {
+			return casted, err
+		}
+
+		var from string
+		t := reflect.TypeOf(conn)
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+			from = "*" + t.Name() + " (" + t.PkgPath() + ")"
+		} else {
+			from = t.Name() + " (" + t.PkgPath() + ")"
+		}
+
+		var to string
+		t = reflect.TypeOf(casted)
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+			to = "*" + t.Name() + " (" + t.PkgPath() + ")"
+		} else {
+			to = t.Name() + " (" + t.PkgPath() + ")"
+		}
+		err = NewErr(FailToCastDaxConn{Name: name, FromType: from, ToType: to})
+	}
+
+	return *new(C), err
 }
