@@ -34,11 +34,12 @@ type /* error reasons */ (
 		Name string
 	}
 
-	// FailToCastConn is an error reason which indicates that it's failed to
+	// FailToCastConn is an error reason which indicates that it is failed to
 	// cast type of a DaxConn.
-	// The field: Name is a registered name of a DaxSrc which created to a target
+	// The field: Name is a registered name of a DaxSrc which created the target
 	// DaxConn.
-	// And the field: Type is a destination type name.
+	// And the fields: FromType and ToType are the types of the source DaxConn
+	// and the destination DaxConn.
 	FailToCastDaxConn struct {
 		Name, FromType, ToType string
 	}
