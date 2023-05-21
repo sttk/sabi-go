@@ -8,202 +8,421 @@ import (
 	"time"
 )
 
-type (
-	FailToRun struct {
-		Name string
-	}
-)
-
 var runnerLogs list.List
-var errorRunnerName string
 
-func clearLogs() {
+func clearRunnerLogs() {
 	runnerLogs.Init()
-	errorRunnerName = ""
-}
-
-type MyRunner struct {
-	Name string
-	Wait time.Duration
-}
-
-func (r MyRunner) Run() sabi.Err {
-	time.Sleep(r.Wait)
-	if r.Name == errorRunnerName {
-		return sabi.NewErr(FailToRun{Name: r.Name})
-	}
-	runnerLogs.PushBack(r.Name)
-	return sabi.Ok()
-}
-
-func TestSeq(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
-
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
-	r3 := sabi.Seq(r0, r1, r2)
-
-	err := r3.Run()
-	assert.True(t, err.IsOk())
-
-	assert.Equal(t, runnerLogs.Len(), 3)
-	assert.Equal(t, runnerLogs.Front().Value, "r-0")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-1")
-	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-2")
-}
-
-func TestSeq_FailToRun(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
-
-	errorRunnerName = "r-1"
-
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
-	r3 := sabi.Seq(r0, r1, r2)
-
-	err := r3.Run()
-	assert.False(t, err.IsOk())
-	switch err.Reason().(type) {
-	case FailToRun:
-		assert.Equal(t, err.Get("Name"), "r-1")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	assert.Equal(t, runnerLogs.Len(), 1)
-	assert.Equal(t, runnerLogs.Front().Value, "r-0")
-}
-
-func TestPara(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
-
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
-	r3 := sabi.Para(r0, r1, r2)
-
-	err := r3.Run()
-	assert.True(t, err.IsOk())
-
-	assert.Equal(t, runnerLogs.Len(), 3)
-	assert.Equal(t, runnerLogs.Front().Value, "r-1")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-2")
-	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-0")
-}
-
-func TestPara_FailToRun(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
-
-	errorRunnerName = "r-1"
-
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
-	r3 := sabi.Para(r0, r1, r2)
-
-	err := r3.Run()
-	assert.False(t, err.IsOk())
-	switch err.Reason().(type) {
-	case sabi.FailToRunInParallel:
-		errs := err.Get("Errors").(map[int]sabi.Err)
-		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, errs[0].Error(), "{reason=FailToRun, Name=r-1}")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	assert.Equal(t, runnerLogs.Len(), 2)
-	assert.Equal(t, runnerLogs.Front().Value, "r-2")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-0")
 }
 
 func TestRunSeq(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
+	clearRunnerLogs()
+	defer clearRunnerLogs()
 
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
 
-	err := sabi.RunSeq(r0, r1, r2)
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	err := sabi.RunSeq(slowerRunner, fasterRunner)
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, runnerLogs.Len(), 3)
-	assert.Equal(t, runnerLogs.Front().Value, "r-0")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-1")
-	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-2")
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Nil(t, log)
 }
 
-func TestRunSeq_FailToRun(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
+func TestRunSeq_failToRunFormerRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
 
-	errorRunnerName = "r-1"
+	type FailToRun struct{}
 
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
 
-	err := sabi.RunSeq(r0, r1, r2)
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
 
-	assert.False(t, err.IsOk())
+	err := sabi.RunSeq(slowerRunner, fasterRunner)
+	assert.True(t, err.IsNotOk())
 	switch err.Reason().(type) {
 	case FailToRun:
-		assert.Equal(t, err.Get("Name"), "r-1")
 	default:
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, runnerLogs.Len(), 1)
-	assert.Equal(t, runnerLogs.Front().Value, "r-0")
+	log := runnerLogs.Front()
+	assert.Nil(t, log)
+}
+
+func TestRunSeq_failToRunLatterRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	err := sabi.RunSeq(slowerRunner, fasterRunner)
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case FailToRun:
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestSeq(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	runner := sabi.Seq(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsOk())
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestSeq_failToRunFormerRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	runner := sabi.Seq(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case FailToRun:
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Nil(t, log)
+}
+
+func TestSeq_failToRunLatterRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	runner := sabi.Seq(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case FailToRun:
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
 }
 
 func TestRunPara(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
+	clearRunnerLogs()
+	defer clearRunnerLogs()
 
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
 
-	err := sabi.RunPara(r0, r1, r2)
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	err := sabi.RunPara(slowerRunner, fasterRunner)
 	assert.True(t, err.IsOk())
 
-	assert.Equal(t, runnerLogs.Len(), 3)
-	assert.Equal(t, runnerLogs.Front().Value, "r-1")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-2")
-	assert.Equal(t, runnerLogs.Front().Next().Next().Value, "r-0")
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
 }
 
-func TestRunPara_FailToRun(t *testing.T) {
-	clearLogs()
-	defer clearLogs()
+func TestRunPara_failToRunFormerRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
 
-	errorRunnerName = "r-1"
+	type FailToRun struct{}
 
-	r0 := MyRunner{Name: "r-0", Wait: 50 * time.Millisecond}
-	r1 := MyRunner{Name: "r-1", Wait: 10 * time.Millisecond}
-	r2 := MyRunner{Name: "r-2", Wait: 20 * time.Millisecond}
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
 
-	err := sabi.RunPara(r0, r1, r2)
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
 
-	assert.False(t, err.IsOk())
+	err := sabi.RunPara(slowerRunner, fasterRunner)
+	assert.True(t, err.IsNotOk())
 	switch err.Reason().(type) {
 	case sabi.FailToRunInParallel:
-		errs := err.Get("Errors").(map[int]sabi.Err)
+		errs := err.Reason().(sabi.FailToRunInParallel).Errors
 		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, errs[0].Error(), "{reason=FailToRun, Name=r-1}")
+		switch errs[0].Reason().(type) {
+		case FailToRun:
+		default:
+			assert.Fail(t, errs[0].Error())
+		}
 	default:
 		assert.Fail(t, err.Error())
 	}
 
-	assert.Equal(t, runnerLogs.Len(), 2)
-	assert.Equal(t, runnerLogs.Front().Value, "r-2")
-	assert.Equal(t, runnerLogs.Front().Next().Value, "r-0")
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestRunPara_failToRunLatterRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	err := sabi.RunPara(slowerRunner, fasterRunner)
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case sabi.FailToRunInParallel:
+		errs := err.Reason().(sabi.FailToRunInParallel).Errors
+		assert.Equal(t, len(errs), 1)
+		switch errs[1].Reason().(type) {
+		case FailToRun:
+		default:
+			assert.Fail(t, errs[1].Error())
+		}
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestPara(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	runner := sabi.Para(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsOk())
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestPara_failToRunSlowerRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	runner := sabi.Para(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case sabi.FailToRunInParallel:
+		errs := err.Reason().(sabi.FailToRunInParallel).Errors
+		assert.Equal(t, len(errs), 1)
+		switch errs[0].Reason().(type) {
+		case FailToRun:
+		default:
+			assert.Fail(t, errs[1].Error())
+		}
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestPara_failToRunFasterRunner(t *testing.T) {
+	clearRunnerLogs()
+	defer clearRunnerLogs()
+
+	type FailToRun struct{}
+
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		return sabi.NewErr(FailToRun{})
+	}
+
+	runner := sabi.Para(slowerRunner, fasterRunner)
+	err := runner()
+	assert.True(t, err.IsNotOk())
+	switch err.Reason().(type) {
+	case sabi.FailToRunInParallel:
+		errs := err.Reason().(sabi.FailToRunInParallel).Errors
+		assert.Equal(t, len(errs), 1)
+		switch errs[1].Reason().(type) {
+		case FailToRun:
+		default:
+			assert.Fail(t, errs[1].Error())
+		}
+	default:
+		assert.Fail(t, err.Error())
+	}
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestRunner_ifOk(t *testing.T) {
+	slowerRunner := func() sabi.Err {
+		time.Sleep(50 * time.Millisecond)
+		runnerLogs.PushBack("slower runner.")
+		return sabi.Ok()
+	}
+
+	fasterRunner := func() sabi.Err {
+		time.Sleep(10 * time.Millisecond)
+		runnerLogs.PushBack("faster runner.")
+		return sabi.Ok()
+	}
+
+	seq0 := sabi.Seq(slowerRunner)
+	seq1 := sabi.Seq(fasterRunner)
+
+	err := seq0().IfOk(seq1)
+	assert.True(t, err.IsOk())
+
+	log := runnerLogs.Front()
+	assert.Equal(t, log.Value, "slower runner.")
+	log = log.Next()
+	assert.Equal(t, log.Value, "faster runner.")
+	log = log.Next()
+	assert.Nil(t, log)
 }

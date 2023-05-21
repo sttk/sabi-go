@@ -34,7 +34,7 @@ func ExamplePara() {
 
 	paraRunner := sabi.Para(txn1, txn2)
 
-	err := sabi.RunSeq(paraRunner)
+	err := paraRunner()
 
 	// Output:
 
@@ -47,7 +47,7 @@ func ExampleSeq() {
 
 	seqRunner := sabi.Seq(txn1, txn2)
 
-	err := sabi.RunSeq(seqRunner)
+	err := seqRunner()
 
 	// Output:
 
