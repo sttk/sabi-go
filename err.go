@@ -196,3 +196,28 @@ func (err Err) Situation() map[string]any {
 
 	return m
 }
+
+// IfOk method executes an argument function if this Err indicates non error.
+// If this Err indicates some error, this method just returns this Err.
+func (err Err) IfOk(fn func() Err) Err {
+	if err.IsOk() {
+		return fn()
+	}
+	return err
+}
+
+// IfNotOk method executes an argument function if this Err indicates some
+// error.
+// If this Err indicates non error, this method just returns this Err.
+func (err Err) IfNotOk(fn func(e Err) Err) Err {
+	if err.IsNotOk() {
+		return fn(err)
+	}
+	return err
+}
+
+// IfEither method executes an argument function in either cases that this Err
+// indicates some error or non error.
+func (err Err) IfEither(fn func(e Err) Err) Err {
+	return fn(err)
+}

@@ -587,3 +587,119 @@ func BenchmarkErr_havingCauseReason_ErrorString(b *testing.B) {
 	b.StopTimer()
 	unused(str)
 }
+
+func fn() sabi.Err { return sabi.Ok() }
+
+func BenchmarkError_IfStatement(b *testing.B) {
+	var err sabi.Err
+	var e error = nil
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e == nil {
+			err = fn()
+		}
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_IfStatement(b *testing.B) {
+	var err sabi.Err
+	e := sabi.Ok()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e.IsOk() {
+			err = fn()
+		}
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_IfOk(b *testing.B) {
+	var err sabi.Err
+	e := sabi.Ok()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		err = e.IfOk(fn)
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func fnError(err error) sabi.Err {
+	return sabi.Ok()
+}
+func fnErr(err sabi.Err) sabi.Err {
+	return sabi.Ok()
+}
+
+func BenchmarkError_IfNotStatement(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e != nil {
+			err = fnError(e)
+		}
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_IfNotStatement(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		if e.IsNotOk() {
+			err = fnErr(e)
+		}
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_IfNotOk(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		err = e.IfNotOk(fnErr)
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkError_either(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldError()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		err = fnError(e)
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_either(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		err = fnErr(e)
+	}
+	b.StopTimer()
+	unused(err)
+}
+
+func BenchmarkErr_IfEither(b *testing.B) {
+	var err sabi.Err
+	e := returnOneFieldReasonedErr()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		err = e.IfEither(fnErr)
+	}
+	b.StopTimer()
+	unused(err)
+}
