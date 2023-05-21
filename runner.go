@@ -5,106 +5,55 @@
 package sabi
 
 type /* error reasons */ (
-	// FailToRunInParallel is an error reason which indicates some runner which
-	// is runned in parallel failed.
+	// FailToRunInParallel is an error reason which indicates some runner
+	// functions which run in parallel failed.
 	FailToRunInParallel struct {
 		Errors map[int]Err
 	}
 )
 
-// Runner is an interface which has #Run method and is runned by RunSeq or
-// RunPara functions.
-type Runner interface {
-	Run() Err
-}
-
-type seqRunner struct {
-	runners []Runner
-}
-
-func (r seqRunner) Run() Err {
-	for _, runner := range r.runners {
-		err := runner.Run()
-		if !err.IsOk() {
+// RunSeq is a function which runs specified runner functions sequencially.
+func RunSeq(runners ...func() Err) Err {
+	for _, runner := range runners {
+		err := runner()
+		if err.IsNotOk() {
 			return err
 		}
 	}
 	return Ok()
 }
 
-// Seq is a function which creates a runner which runs multiple runners
-// specified as arguments sequencially.
-func Seq(runners ...Runner) Runner {
-	return seqRunner{runners: runners[:]}
-}
-
-type paraRunner struct {
-	runners []Runner
-}
-
-func (r paraRunner) Run() Err {
-	ch := make(chan Err)
-
-	for _, runner := range r.runners {
-		go func(runner Runner, ch chan Err) {
-			err := runner.Run()
-			ch <- err
-		}(runner, ch)
+// Seq is a function which creates a runner function which runs multiple
+// runner functions specified as arguments sequencially.
+func Seq(runners ...func() Err) func() Err {
+	return func() Err {
+		return RunSeq(runners...)
 	}
-
-	errs := make(map[int]Err)
-	n := len(r.runners)
-	for i := 0; i < n; i++ {
-		select {
-		case err := <-ch:
-			if !err.IsOk() {
-				errs[i] = err
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return NewErr(FailToRunInParallel{Errors: errs})
-	}
-
-	return Ok()
 }
 
-// Para is a function which creates a runner which runs multiple runners
-// specified as arguments in parallel.
-func Para(runners ...Runner) Runner {
-	return paraRunner{runners: runners[:]}
+type indexedErr struct {
+	index int
+	err   Err
 }
 
-// RunSeq is a function which runs specified runners sequencially.
-func RunSeq(runners ...Runner) Err {
-	for _, runner := range runners {
-		err := runner.Run()
-		if !err.IsOk() {
-			return err
-		}
-	}
-	return Ok()
-}
+func RunPara(runners ...func() Err) Err {
+	ch := make(chan indexedErr)
 
-// RunPara is a function which runs specified runners in parallel.
-func RunPara(runners ...Runner) Err {
-	ch := make(chan Err)
-
-	for _, runner := range runners {
-		go func(runner Runner, ch chan Err) {
-			err := runner.Run()
-			ch <- err
-		}(runner, ch)
+	for i, r := range runners {
+		go func(index int, runner func() Err, ch chan indexedErr) {
+			err := runner()
+			ie := indexedErr{index: index, err: err}
+			ch <- ie
+		}(i, r, ch)
 	}
 
 	errs := make(map[int]Err)
 	n := len(runners)
 	for i := 0; i < n; i++ {
 		select {
-		case err := <-ch:
-			if !err.IsOk() {
-				errs[i] = err
+		case ie := <-ch:
+			if ie.err.IsNotOk() {
+				errs[ie.index] = ie.err
 			}
 		}
 	}
@@ -114,4 +63,12 @@ func RunPara(runners ...Runner) Err {
 	}
 
 	return Ok()
+}
+
+// Para is a function which creates a runner function which runs multiple
+// runner functions specified as arguments in parallel.
+func Para(runners ...func() Err) func() Err {
+	return func() Err {
+		return RunPara(runners...)
+	}
 }

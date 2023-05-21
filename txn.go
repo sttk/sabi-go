@@ -34,18 +34,8 @@ func RunTxn[D any](base DaxBase, logics ...func(dax D) Err) Err {
 
 // Txn is a function which creates a transaction having specified logic
 // functions.
-func Txn[D any](base DaxBase, logics ...func(dax D) Err) Runner {
-	return txnRunner[D]{
-		base:   base,
-		logics: logics,
+func Txn[D any](base DaxBase, logics ...func(dax D) Err) func() Err {
+	return func() Err {
+		return RunTxn[D](base, logics...)
 	}
-}
-
-type txnRunner[D any] struct {
-	base   DaxBase
-	logics []func(D) Err
-}
-
-func (txn txnRunner[D]) Run() Err {
-	return RunTxn(txn.base, txn.logics...)
 }
