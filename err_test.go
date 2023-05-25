@@ -249,11 +249,11 @@ func TestErr_IfOk_err(t *testing.T) {
 	}
 }
 
-func TestErr_IfNotOk_ok(t *testing.T) {
+func TestErr_Else_ok(t *testing.T) {
 	err := sabi.Ok()
 
 	s := ""
-	err2 := err.IfNotOk(func(e sabi.Err) sabi.Err {
+	err2 := err.Else(func() sabi.Err {
 		s = "executed."
 		return sabi.NewErr(InvalidValue{Value: "x"})
 	})
@@ -268,16 +268,16 @@ func TestErr_IfNotOk_ok(t *testing.T) {
 	}
 }
 
-func TestErr_IfNotOk_err(t *testing.T) {
+func TestErr_Else_err(t *testing.T) {
 	err := sabi.NewErr(InvalidValue{Value: "x"})
 
 	s := ""
-	err2 := err.IfNotOk(func(e sabi.Err) sabi.Err {
-		s = e.Error()
+	err2 := err.Else(func() sabi.Err {
+		s = "executed."
 		return sabi.Ok()
 	})
 
-	assert.Equal(t, s, "{reason=InvalidValue, Value=x}")
+	assert.Equal(t, s, "executed.")
 	assert.True(t, err.IsNotOk())
 	assert.True(t, err2.IsOk())
 	switch err2.Reason().(type) {
@@ -287,11 +287,11 @@ func TestErr_IfNotOk_err(t *testing.T) {
 	}
 }
 
-func TestErr_IfEither_ok(t *testing.T) {
+func TestErr_Then_ok(t *testing.T) {
 	err := sabi.Ok()
 
 	s := ""
-	err2 := err.IfEither(func(e sabi.Err) sabi.Err {
+	err2 := err.Then(func() sabi.Err {
 		s = "executed."
 		return sabi.NewErr(InvalidValue{Value: "x"})
 	})
@@ -306,16 +306,16 @@ func TestErr_IfEither_ok(t *testing.T) {
 	}
 }
 
-func TestErr_IfEither_err(t *testing.T) {
+func TestErr_Then_err(t *testing.T) {
 	err := sabi.NewErr(InvalidValue{Value: "x"})
 
 	s := ""
-	err2 := err.IfEither(func(e sabi.Err) sabi.Err {
-		s = e.Error()
+	err2 := err.Then(func() sabi.Err {
+		s = "executed."
 		return sabi.Ok()
 	})
 
-	assert.Equal(t, s, "{reason=InvalidValue, Value=x}")
+	assert.Equal(t, s, "executed.")
 	assert.True(t, err.IsNotOk())
 	assert.True(t, err2.IsOk())
 	switch err2.Reason().(type) {

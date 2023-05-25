@@ -206,18 +206,18 @@ func (err Err) IfOk(fn func() Err) Err {
 	return err
 }
 
-// IfNotOk method executes an argument function if this Err indicates some
+// Else method executes an argument function if this Err indicates some
 // error.
 // If this Err indicates non error, this method just returns this Err.
-func (err Err) IfNotOk(fn func(e Err) Err) Err {
+func (err Err) Else(fn func() Err) Err {
 	if err.IsNotOk() {
-		return fn(err)
+		return fn()
 	}
 	return err
 }
 
-// IfEither method executes an argument function in either cases that this Err
+// Then method executes an argument function in either cases that this Err
 // indicates some error or non error.
-func (err Err) IfEither(fn func(e Err) Err) Err {
-	return fn(err)
+func (err Err) Then(fn func() Err) Err {
+	return fn()
 }

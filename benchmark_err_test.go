@@ -627,45 +627,38 @@ func BenchmarkErr_IfOk(b *testing.B) {
 	unused(err)
 }
 
-func fnError(err error) sabi.Err {
-	return sabi.Ok()
-}
-func fnErr(err sabi.Err) sabi.Err {
-	return sabi.Ok()
-}
-
-func BenchmarkError_IfNotStatement(b *testing.B) {
+func BenchmarkError_IfNotErrStatement(b *testing.B) {
 	var err sabi.Err
 	e := returnOneFieldError()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if e != nil {
-			err = fnError(e)
+			err = fn()
 		}
 	}
 	b.StopTimer()
 	unused(err)
 }
 
-func BenchmarkErr_IfNotStatement(b *testing.B) {
+func BenchmarkErr_IfNotErrStatement(b *testing.B) {
 	var err sabi.Err
 	e := returnOneFieldReasonedErr()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if e.IsNotOk() {
-			err = fnErr(e)
+			err = fn()
 		}
 	}
 	b.StopTimer()
 	unused(err)
 }
 
-func BenchmarkErr_IfNotOk(b *testing.B) {
+func BenchmarkErr_Else(b *testing.B) {
 	var err sabi.Err
 	e := returnOneFieldReasonedErr()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err = e.IfNotOk(fnErr)
+		err = e.Else(fn)
 	}
 	b.StopTimer()
 	unused(err)
@@ -673,10 +666,9 @@ func BenchmarkErr_IfNotOk(b *testing.B) {
 
 func BenchmarkError_either(b *testing.B) {
 	var err sabi.Err
-	e := returnOneFieldError()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err = fnError(e)
+		err = fn()
 	}
 	b.StopTimer()
 	unused(err)
@@ -684,21 +676,20 @@ func BenchmarkError_either(b *testing.B) {
 
 func BenchmarkErr_either(b *testing.B) {
 	var err sabi.Err
-	e := returnOneFieldReasonedErr()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err = fnErr(e)
+		err = fn()
 	}
 	b.StopTimer()
 	unused(err)
 }
 
-func BenchmarkErr_IfEither(b *testing.B) {
+func BenchmarkErr_Then(b *testing.B) {
 	var err sabi.Err
 	e := returnOneFieldReasonedErr()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		err = e.IfEither(fnErr)
+		err = e.Then(fn)
 	}
 	b.StopTimer()
 	unused(err)
