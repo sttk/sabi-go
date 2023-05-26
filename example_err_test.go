@@ -223,38 +223,3 @@ func ExampleErr_IfOk() {
 	// Output:
 	// execute if non error.
 }
-
-func ExampleErr_IfNotOk() {
-	err := sabi.Ok()
-	err.IfNotOk(func(e sabi.Err) sabi.Err {
-		fmt.Println("not execute if non error.")
-		return sabi.Ok()
-	})
-
-	err = sabi.NewErr(FailToDoSomething{})
-	err.IfNotOk(func(e sabi.Err) sabi.Err {
-		fmt.Println("execute if some error.")
-		return sabi.Ok()
-	})
-
-	// Output:
-	// execute if some error.
-}
-
-func ExampleErr_IfEither() {
-	err := sabi.Ok()
-	err.IfEither(func(e sabi.Err) sabi.Err {
-		fmt.Println("execute if non error.")
-		return sabi.Ok()
-	})
-
-	err = sabi.NewErr(FailToDoSomething{})
-	err.IfEither(func(e sabi.Err) sabi.Err {
-		fmt.Println("execute if some error.")
-		return sabi.Ok()
-	})
-
-	// Output:
-	// execute if non error.
-	// execute if some error.
-}
