@@ -5,7 +5,11 @@ import (
 	"testing"
 )
 
-func unused2(v any) {}
+func unused(v any) {}
+
+func returnOkErr() sabi.Err {
+	return sabi.Ok()
+}
 
 func BenchmarkNotify_addErrHandler(b *testing.B) {
 	b.StartTimer()
@@ -23,7 +27,14 @@ func BenchmarkNotify_ok(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	unused2(err)
+	unused(err)
+}
+
+type EmptyReason struct {
+}
+
+func returnEmptyReasonedErr() sabi.Err {
+	return sabi.NewErr(EmptyReason{})
 }
 
 func BenchmarkNotify_emptyReason(b *testing.B) {
@@ -34,7 +45,15 @@ func BenchmarkNotify_emptyReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	unused2(err)
+	unused(err)
+}
+
+type OneFieldReason struct {
+	FieldA string
+}
+
+func returnOneFieldReasonedErr() sabi.Err {
+	return sabi.NewErr(OneFieldReason{FieldA: "abc"})
 }
 
 func BenchmarkNotify_oneFieldReason(b *testing.B) {
@@ -45,7 +64,21 @@ func BenchmarkNotify_oneFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	unused2(err)
+	unused(err)
+}
+
+type FiveFieldReason struct {
+	FieldA string
+	FieldB int
+	FieldC bool
+	FieldD string
+	FieldE string
+}
+
+func returnFiveFieldReasonedErr() sabi.Err {
+	return sabi.NewErr(FiveFieldReason{
+		FieldA: "abc", FieldB: 123, FieldC: true, FieldD: "def", FieldE: "ghi",
+	})
 }
 
 func BenchmarkNotify_fiveFieldReason(b *testing.B) {
@@ -56,7 +89,26 @@ func BenchmarkNotify_fiveFieldReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	unused2(err)
+	unused(err)
+}
+
+type EmptyError struct {
+}
+
+func (e EmptyError) Error() string {
+	return "EmptyError"
+}
+
+type HavingCauseError struct {
+	Cause error
+}
+
+func (e HavingCauseError) Error() string {
+	return "HavingCauseError{cause:" + e.Cause.Error() + "}"
+}
+
+func returnHavingCauseReasonedErr() sabi.Err {
+	return sabi.NewErr(HavingCauseError{}, EmptyError{})
 }
 
 func BenchmarkNotify_havingCauseReason(b *testing.B) {
@@ -67,5 +119,5 @@ func BenchmarkNotify_havingCauseReason(b *testing.B) {
 		err = e
 	}
 	b.StopTimer()
-	unused2(err)
+	unused(err)
 }

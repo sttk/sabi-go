@@ -4,6 +4,8 @@ import (
 	"github.com/sttk-go/sabi"
 )
 
+func unused(v any) {}
+
 type BazDax interface {
 	GetData() string
 	SetData(data string)
