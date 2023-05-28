@@ -5,18 +5,19 @@ import (
 	"testing"
 )
 
-type FooDaxConn struct {}
+type FooDaxConn struct{}
 
 func (conn FooDaxConn) Commit() sabi.Err { return sabi.Ok() }
-func (conn FooDaxConn) Rollback() {}
-func (conn FooDaxConn) Close() {}
+func (conn FooDaxConn) Rollback()        {}
+func (conn FooDaxConn) Close()           {}
 
-type FooDaxSrc struct {}
+type FooDaxSrc struct{}
+
 func (ds FooDaxSrc) CreateDaxConn() (sabi.DaxConn, sabi.Err) {
 	return FooDaxConn{}, sabi.Ok()
 }
 func (ds FooDaxSrc) SetUp() sabi.Err { return sabi.Ok() }
-func (ds FooDaxSrc) End() {}
+func (ds FooDaxSrc) End()            {}
 
 func BenchmarkDaxSrc_AddGlobalDaxSrc(b *testing.B) {
 	b.StartTimer()
