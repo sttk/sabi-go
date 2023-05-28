@@ -44,12 +44,12 @@ cover() {
 }
 
 bench() {
-  local dir=$2
+  local dir=$1
   if [[ "$dir" == "" ]]; then
     dir="."
   fi
   pushd $dir
-  go test -bench . --benchmem -run=^$
+  go test -bench . --benchmem
   errcheck $?
   popd
 }
@@ -63,6 +63,9 @@ if [[ "$#" == "0" ]]; then
 
 elif [[ "$1" == "unit" ]]; then
   unit $2
+
+elif [[ "$1" == "bench" ]]; then
+  bench $2
 
 else
   for a in "$@"; do
@@ -81,9 +84,6 @@ else
       ;;
     cover)
       cover
-      ;;
-    bench)
-      bench
       ;;
     '')
       compile
