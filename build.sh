@@ -25,19 +25,19 @@ compile() {
 }
 
 test() {
-  go test -v $(go list ./... | grep -v /benchmark/)
+  go test -v $(go list ./... | grep -v /benchmark)
   errcheck $?
 }
 
 unit() {
-  go test -v -run $1 $(go list ./... | grep -v /benchmark/)
+  go test -v -run $1 $(go list ./... | grep -v /benchmark)
   errcheck $?
 }
 
 cover() {
   mkdir -p coverage
   errcheck $?
-  go test -coverprofile=coverage/cover.out $(go list ./... | grep -v /benchmark/)
+  go test -coverprofile=coverage/cover.out $(go list ./... | grep -v /benchmark)
   errcheck $?
   go tool cover -html=coverage/cover.out -o coverage/cover.html
   errcheck $?
