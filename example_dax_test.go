@@ -2,8 +2,9 @@ package sabi_test
 
 import (
 	"fmt"
-	"github.com/sttk-go/sabi"
 	"reflect"
+
+	"github.com/sttk/sabi"
 )
 
 func ExampleAddGlobalDaxSrc() {

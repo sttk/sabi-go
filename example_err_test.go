@@ -3,7 +3,8 @@ package sabi_test
 import (
 	"errors"
 	"fmt"
-	"github.com/sttk-go/sabi"
+
+	"github.com/sttk/sabi"
 )
 
 func ExampleNewErr() {
@@ -164,7 +165,7 @@ func ExampleErr_ReasonPackage() {
 	fmt.Printf("%v\n", err.ReasonPackage())
 
 	// Output:
-	// github.com/sttk-go/sabi_test
+	// github.com/sttk/sabi_test
 }
 
 func ExampleErr_Situation() {

@@ -1,8 +1,9 @@
 package sabi_test
 
 import (
-	"github.com/sttk-go/sabi"
 	"testing"
+
+	"github.com/sttk/sabi"
 )
 
 type FooDaxConn struct{}

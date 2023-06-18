@@ -2,9 +2,10 @@ package sabi_test
 
 import (
 	"fmt"
-	"github.com/sttk-go/sabi"
 	"strconv"
 	"time"
+
+	"github.com/sttk/sabi"
 )
 
 func ExampleAddAsyncErrHandler() {
@@ -57,7 +58,7 @@ func ExampleFixErrCfgs() {
 	sabi.NewErr(FailToDoSomething{Name: "abc"})
 
 	// Output:
-	// This handler is registered at example_notify_test.go:57
+	// This handler is registered at example_notify_test.go:58
 
 	sabi.ClearErrHandlers()
 }

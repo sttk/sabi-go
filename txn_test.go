@@ -1,10 +1,12 @@
 package sabi_test
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/sttk-go/sabi"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sttk/sabi"
 )
 
 func TestRunTxn(t *testing.T) {

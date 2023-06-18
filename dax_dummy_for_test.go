@@ -2,7 +2,8 @@ package sabi_test
 
 import (
 	"container/list"
-	"github.com/sttk-go/sabi"
+
+	"github.com/sttk/sabi"
 )
 
 var (

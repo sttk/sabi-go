@@ -2,10 +2,12 @@ package sabi_test
 
 import (
 	"container/list"
-	"github.com/stretchr/testify/assert"
-	"github.com/sttk-go/sabi"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sttk/sabi"
 )
 
 var runnerLogs list.List

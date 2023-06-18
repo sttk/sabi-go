@@ -2,9 +2,11 @@ package sabi_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/sttk-go/sabi"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sttk/sabi"
 )
 
 type GreetDax interface {

@@ -1,7 +1,7 @@
 package sabi_test
 
 import (
-	"github.com/sttk-go/sabi"
+	"github.com/sttk/sabi"
 )
 
 func unused(v any) {}
