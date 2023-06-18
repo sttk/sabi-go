@@ -33,7 +33,7 @@ Therefore, a dax interface can make clear which methods are used in a logic. And
 
 The usage of this framework is described on the overview in the go package document.
 
-See https://pkg.go.dev/github.com/sttk-go/sabi#pkg-overview.
+See https://pkg.go.dev/github.com/sttk/sabi#pkg-overview.
 
 
 ## Supporting Go versions
@@ -46,15 +46,15 @@ This framework supports Go 1.18 or later.
 % gvm-fav
 Now using version go1.18.10
 go version go1.18.10 darwin/amd64
-ok  	github.com/sttk-go/sabi	0.834s	coverage: 99.6% of statements
+ok  	github.com/sttk/sabi	0.834s	coverage: 99.6% of statements
 
 Now using version go1.19.5
 go version go1.19.5 darwin/amd64
-ok  	github.com/sttk-go/sabi	0.836s	coverage: 99.6% of statements
+ok  	github.com/sttk/sabi	0.836s	coverage: 99.6% of statements
 
 Now using version go1.20
 go version go1.20 darwin/amd64
-ok  	github.com/sttk-go/sabi	0.843s	coverage: 99.6% of statements
+ok  	github.com/sttk/sabi	0.843s	coverage: 99.6% of statements
 
 Back to go1.20
 Now using version go1.20
@@ -70,10 +70,10 @@ This program is free software under MIT License.<br>
 See the file LICENSE in this distribution for more details.
 
 
-[repo-url]: https://github.com/sttk-go/sabi
-[pkg-dev-img]: https://pkg.go.dev/badge/github.com/sttk-go/sabi.svg
-[pkg-dev-url]: https://pkg.go.dev/github.com/sttk-go/sabi
-[ci-img]: https://github.com/sttk-go/sabi/actions/workflows/go.yml/badge.svg?branch=main
-[ci-url]: https://github.com/sttk-go/sabi/actions
+[repo-url]: https://github.com/sttk/sabi-go
+[pkg-dev-img]: https://pkg.go.dev/badge/github.com/sttk/sabi.svg
+[pkg-dev-url]: https://pkg.go.dev/github.com/sttk/sabi
+[ci-img]: https://github.com/sttk/sabi-go/actions/workflows/go.yml/badge.svg?branch=main
+[ci-url]: https://github.com/sttk/sabi-go/actions
 [mit-img]: https://img.shields.io/badge/license-MIT-green.svg
 [mit-url]: https://opensource.org/licenses/MIT

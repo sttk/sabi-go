@@ -2,11 +2,12 @@ package sabi
 
 import (
 	"container/list"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type ReasonForNotification struct{}
@@ -201,13 +202,13 @@ func TestNotifyErr_withHandlers(t *testing.T) {
 
 	assert.Equal(t, syncLogs.Len(), 2)
 	assert.Equal(t, syncLogs.Front().Value,
-		"ReasonForNotification-1:notify_test.go:198")
+		"ReasonForNotification-1:notify_test.go:199")
 	assert.Equal(t, syncLogs.Front().Next().Value,
-		"ReasonForNotification-2:notify_test.go:198")
+		"ReasonForNotification-2:notify_test.go:199")
 
 	time.Sleep(100 * time.Millisecond)
 
 	assert.Equal(t, asyncLogs.Len(), 1)
 	assert.Equal(t, asyncLogs.Front().Value,
-		"ReasonForNotification-3:notify_test.go:198")
+		"ReasonForNotification-3:notify_test.go:199")
 }

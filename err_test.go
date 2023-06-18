@@ -2,9 +2,11 @@ package sabi_test
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/sttk-go/sabi"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/sttk/sabi"
 )
 
 type /* error reasons */ (
@@ -38,7 +40,7 @@ func TestNewErr_reasonIsValue(t *testing.T) {
 	assert.False(t, err.IsOk())
 	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
 	assert.Nil(t, err.Get("value"))
 	assert.Nil(t, err.Get("Name"))
@@ -74,7 +76,7 @@ func TestNewErr_reasonIsPointer(t *testing.T) {
 	assert.False(t, err.IsOk())
 	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
 	assert.Nil(t, err.Get("value"))
 	assert.Nil(t, err.Get("Name"))
@@ -111,7 +113,7 @@ func TestNewErr_withCause(t *testing.T) {
 	assert.False(t, err.IsOk())
 	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi_test")
 	assert.Equal(t, err.Get("Value"), "abc")
 	assert.Nil(t, err.Get("value"))
 	assert.Nil(t, err.Get("Name"))
@@ -150,7 +152,7 @@ func TestNewErr_causeIsAlsoErr(t *testing.T) {
 	assert.False(t, err.IsOk())
 	assert.True(t, err.IsNotOk())
 	assert.Equal(t, err.ReasonName(), "InvalidValue")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk-go/sabi_test")
+	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi_test")
 
 	assert.Equal(t, err.Get("Value"), "abc")
 	assert.Equal(t, err.Get("Name"), "foo")

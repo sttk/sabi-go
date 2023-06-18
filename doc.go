@@ -3,7 +3,7 @@
 // See the file LICENSE in this distribution for more details.
 
 /*
-Package github.com/sttk-go/sabi is a small framework to separate logic parts and data accesses parts for Golang applications.
+Package github.com/sttk/sabi is a small framework to separate logic parts and data accesses parts for Golang applications.
 
 # Logic
 
@@ -15,7 +15,7 @@ In this logic part, it's no concern where a data comes from or goes to.
 
 For example, in the following code, GreetLogic is a logic function and GreetDax is a dax interface.
 
-	import "github.com/sttk-go/sabi"
+	import "github.com/sttk/sabi"
 
 	type GreetDax interface {
 		UserName() (string, sabi.Err)
