@@ -17,7 +17,6 @@ func ExampleAddAsyncErrHandler() {
 	type FailToDoSomething struct{ Name string }
 
 	sabi.NewErr(FailToDoSomething{Name: "abc"})
-
 	// Output:
 	// Asynchronous error handling: {reason=FailToDoSomething, Name=abc}
 
@@ -34,7 +33,6 @@ func ExampleAddSyncErrHandler() {
 	type FailToDoSomething struct{ Name string }
 
 	sabi.NewErr(FailToDoSomething{Name: "abc"})
-
 	// Output:
 	// Synchronous error handling: {reason=FailToDoSomething, Name=abc}
 
@@ -56,9 +54,8 @@ func ExampleFixErrCfgs() {
 	type FailToDoSomething struct{ Name string }
 
 	sabi.NewErr(FailToDoSomething{Name: "abc"})
-
 	// Output:
-	// This handler is registered at example_notify_test.go:58
+	// This handler is registered at example_notify_test.go:56
 
 	sabi.ClearErrHandlers()
 }
