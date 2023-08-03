@@ -39,7 +39,6 @@ func ExampleNewErr() {
 		Param2: 123,
 	}, cause)
 	fmt.Printf("(4) %v\n", err)
-
 	// Output:
 	// (1) {reason=FailToDoSomething}
 	// (2) {reason=FailToDoSomethingWithParams, Param1=ABC, Param2=123}
@@ -51,7 +50,6 @@ func ExampleOk() {
 	err := sabi.Ok()
 	fmt.Printf("err = %v\n", err)
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
-
 	// Output:
 	// err = {reason=nil}
 	// err.IsOk() = true
@@ -64,7 +62,6 @@ func ExampleErr_Cause() {
 
 	err := sabi.NewErr(FailToDoSomething{}, cause)
 	fmt.Printf("%v\n", err.Cause())
-
 	// Output:
 	// Causal error
 }
@@ -82,7 +79,6 @@ func ExampleErr_Error() {
 		Param2: 123,
 	}, cause)
 	fmt.Printf("%v\n", err.Error())
-
 	// Output:
 	// {reason=FailToDoSomething, Param1=ABC, Param2=123, cause=Causal error}
 }
@@ -100,7 +96,6 @@ func ExampleErr_Get() {
 	fmt.Printf("Param1=%v\n", err.Get("Param1"))
 	fmt.Printf("Param2=%v\n", err.Get("Param2"))
 	fmt.Printf("Param3=%v\n", err.Get("Param3"))
-
 	// Output:
 	// Param1=ABC
 	// Param2=123
@@ -114,7 +109,6 @@ func ExampleErr_IsOk() {
 	type FailToDoSomething struct{}
 	err = sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.IsOk())
-
 	// Output:
 	// true
 	// false
@@ -140,7 +134,6 @@ func ExampleErr_Reason() {
 		reason := err.Reason().(*FailToDoSomething)
 		fmt.Printf("The value of reason.Param1 is: %v\n", reason.Param1)
 	}
-
 	// Output:
 	// The reason of the error is: FailToDoSomething
 	// The value of reason.Param1 is: value1
@@ -153,7 +146,6 @@ func ExampleErr_ReasonName() {
 
 	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonName())
-
 	// Output:
 	// FailToDoSomething
 }
@@ -163,7 +155,6 @@ func ExampleErr_ReasonPackage() {
 
 	err := sabi.NewErr(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonPackage())
-
 	// Output:
 	// github.com/sttk/sabi_test
 }
@@ -179,7 +170,6 @@ func ExampleErr_Situation() {
 		Param2: 123,
 	})
 	fmt.Printf("%v\n", err.Situation())
-
 	// Output:
 	// map[Param1:ABC Param2:123]
 }
@@ -198,7 +188,6 @@ func ExampleErr_Unwrap() {
 	fmt.Printf("errors.Is(err, cause2) = %v\n", errors.Is(err, cause2))
 	fmt.Printf("errors.As(err, cause1) = %v\n", errors.Is(err, cause1))
 	fmt.Printf("errors.As(err, cause2) = %v\n", errors.Is(err, cause2))
-
 	// Output:
 	// err.Unwrap() = Causal error 1
 	// errors.Unwrap(err) = Causal error 1
@@ -222,7 +211,6 @@ func ExampleErr_IfOk() {
 		fmt.Println("not execute if some error.")
 		return sabi.Ok()
 	})
-
 	// Output:
 	// execute if non error.
 }
