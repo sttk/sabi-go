@@ -209,6 +209,8 @@ func ExampleErr_Unwrap() {
 }
 
 func ExampleErr_IfOk() {
+	type FailToDoSomething struct{}
+
 	err := sabi.Ok()
 	err.IfOk(func() sabi.Err {
 		fmt.Println("execute if non error.")
