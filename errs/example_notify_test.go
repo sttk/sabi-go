@@ -1,61 +1,61 @@
-package sabi_test
+package errs_test
 
 import (
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/sttk/sabi"
+	"github.com/sttk/sabi/errs"
 )
 
-func ExampleAddAsyncErrHandler() {
-	sabi.AddAsyncErrHandler(func(err sabi.Err, occ sabi.ErrOccasion) {
+func ExampleAddAsyncHandler() {
+	errs.AddAsyncHandler(func(err errs.Err, occ errs.ErrOcc) {
 		fmt.Println("Asynchronous error handling: " + err.Error())
 	})
-	sabi.FixErrCfgs()
+	errs.FixCfg()
 
 	type FailToDoSomething struct{ Name string }
 
-	sabi.NewErr(FailToDoSomething{Name: "abc"})
+	errs.New(FailToDoSomething{Name: "abc"})
 	// Output:
 	// Asynchronous error handling: {reason=FailToDoSomething, Name=abc}
 
 	time.Sleep(100 * time.Millisecond)
-	sabi.ClearErrHandlers()
+	errs.ClearErrHandlers()
 }
 
-func ExampleAddSyncErrHandler() {
-	sabi.AddSyncErrHandler(func(err sabi.Err, occ sabi.ErrOccasion) {
+func ExampleAddSyncHandler() {
+	errs.AddSyncHandler(func(err errs.Err, occ errs.ErrOcc) {
 		fmt.Println("Synchronous error handling: " + err.Error())
 	})
-	sabi.FixErrCfgs()
+	errs.FixCfg()
 
 	type FailToDoSomething struct{ Name string }
 
-	sabi.NewErr(FailToDoSomething{Name: "abc"})
+	errs.New(FailToDoSomething{Name: "abc"})
 	// Output:
 	// Synchronous error handling: {reason=FailToDoSomething, Name=abc}
 
-	sabi.ClearErrHandlers()
+	errs.ClearErrHandlers()
 }
 
-func ExampleFixErrCfgs() {
-	sabi.AddSyncErrHandler(func(err sabi.Err, occ sabi.ErrOccasion) {
+func ExampleFixCfg() {
+	errs.AddSyncHandler(func(err errs.Err, occ errs.ErrOcc) {
 		fmt.Println("This handler is registered at " + occ.File() + ":" +
 			strconv.Itoa(occ.Line()))
 	})
 
-	sabi.FixErrCfgs()
+	errs.FixCfg()
 
-	sabi.AddSyncErrHandler(func(err sabi.Err, occ sabi.ErrOccasion) {
+	errs.AddSyncHandler(func(err errs.Err, occ errs.ErrOcc) {
 		fmt.Println("This handler is not registered")
 	})
 
 	type FailToDoSomething struct{ Name string }
 
-	sabi.NewErr(FailToDoSomething{Name: "abc"})
+	errs.New(FailToDoSomething{Name: "abc"})
 	// Output:
 	// This handler is registered at example_notify_test.go:56
 
-	sabi.ClearErrHandlers()
+	errs.ClearErrHandlers()
 }

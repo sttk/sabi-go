@@ -1,882 +1,1655 @@
-package sabi_test
+package sabi
 
 import (
-	"fmt"
+	"container/list"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/sttk/sabi"
+	"github.com/sttk/sabi/errs"
 )
 
-func TestAddGlobalDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+var (
+	Logs                       list.List
+	WillFailToSetupFooDaxSrc   bool
+	WillFailToSetupBarDaxSrc   bool
+	WillFailToCreateFooDaxConn bool
+	WillCreatedFooDaxConnBeNil bool
+	WillFailToCommitFooDaxConn bool
+	WillFailToCommitBarDaxConn bool
+)
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 0)
+func Reset() {
+	errs.FixCfg()
 
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
+	isGlobalDaxSrcsFixed = false
+	globalDaxSrcEntryList.head = nil
+	globalDaxSrcEntryList.last = nil
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
+	WillFailToSetupFooDaxSrc = false
+	WillFailToSetupBarDaxSrc = false
 
-	sabi.AddGlobalDaxSrc("bar", &BarDaxSrc{})
+	WillFailToCreateFooDaxConn = false
+	WillCreatedFooDaxConnBeNil = false
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 2)
+	WillFailToCommitFooDaxConn = false
+	WillFailToCommitBarDaxConn = false
+
+	Logs.Init()
 }
 
-func TestStartUpGlobalDaxSrcs(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+type (
+	FailToSetupFooDaxSrc struct{}
+	FailToSetupBarDaxSrc struct{}
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 0)
+	FailToCreateFooDaxConn struct{}
+	FailToCommitFooDaxConn struct{}
+	FailToCommitBarDaxConn struct{}
+)
 
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
+///
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
+type FooDaxSrc struct{}
 
-	err := sabi.StartUpGlobalDaxSrcs()
+func (ds FooDaxSrc) Setup(ag AsyncGroup) errs.Err {
+	if WillFailToSetupFooDaxSrc {
+		return errs.New(FailToSetupFooDaxSrc{})
+	}
+	Logs.PushBack("FooDaxSrc#Setup")
+	return errs.Ok()
+}
+
+func (ds FooDaxSrc) Close() {
+	Logs.PushBack("FooDaxSrc#Close")
+}
+
+func (ds FooDaxSrc) CreateDaxConn() (DaxConn, errs.Err) {
+	if WillFailToCreateFooDaxConn {
+		return nil, errs.New(FailToCreateFooDaxConn{})
+	}
+	if WillCreatedFooDaxConnBeNil {
+		return nil, errs.Ok()
+	}
+	Logs.PushBack("FooDaxSrc#CreateDaxConn")
+	return FooDaxConn{client: &FooClient{}}, errs.Ok()
+}
+
+type FooClient struct {
+	committed bool
+}
+type FooDaxConn struct {
+	client *FooClient
+}
+
+func (conn FooDaxConn) Commit(ag AsyncGroup) errs.Err {
+	if WillFailToCommitFooDaxConn {
+		return errs.New(FailToCommitFooDaxConn{})
+	}
+	Logs.PushBack("FooDaxConn#Commit")
+	conn.client.committed = true
+	return errs.Ok()
+}
+
+func (conn FooDaxConn) IsCommitted() bool {
+	return conn.client.committed
+}
+
+func (conn FooDaxConn) Rollback(ag AsyncGroup) {
+	Logs.PushBack("FooDaxConn#Rollback")
+}
+
+func (conn FooDaxConn) ForceBack(ag AsyncGroup) {
+	Logs.PushBack("FooDaxConn#ForceBack")
+}
+
+func (conn FooDaxConn) Close() {
+	Logs.PushBack("FooDaxConn#Close")
+}
+
+type BarDaxSrc struct{}
+
+func (ds *BarDaxSrc) Setup(ag AsyncGroup) errs.Err {
+	ag.Add(func() errs.Err {
+		if WillFailToSetupBarDaxSrc {
+			return errs.New(FailToSetupBarDaxSrc{})
+		}
+		Logs.PushBack("BarDaxSrc#Setup")
+		return errs.Ok()
+	})
+	return errs.Ok()
+}
+func (ds *BarDaxSrc) Close() {
+	Logs.PushBack("BarDaxSrc#Close")
+}
+func (ds *BarDaxSrc) CreateDaxConn() (DaxConn, errs.Err) {
+	Logs.PushBack("BarDaxSrc#CreateDaxConn")
+	return &BarDaxConn{}, errs.Ok()
+}
+
+type BarDaxConn struct {
+	committed bool
+}
+
+func (conn *BarDaxConn) Commit(ag AsyncGroup) errs.Err {
+	ag.Add(func() errs.Err {
+		if WillFailToCommitBarDaxConn {
+			return errs.New(FailToCommitBarDaxConn{})
+		}
+		Logs.PushBack("BarDaxConn#Commit")
+		conn.committed = true
+		return errs.Ok()
+	})
+	return errs.Ok()
+}
+func (conn *BarDaxConn) IsCommitted() bool {
+	return conn.committed
+}
+func (conn *BarDaxConn) Rollback(ag AsyncGroup) {
+	Logs.PushBack("BarDaxConn#Rollback")
+}
+func (conn *BarDaxConn) ForceBack(ag AsyncGroup) {
+	Logs.PushBack("BarDaxConn#ForceBack")
+}
+func (conn *BarDaxConn) Close() {
+	Logs.PushBack("BarDaxConn#Close")
+}
+
+///
+
+func TestUses_ok(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	Uses("cliargs", FooDaxSrc{})
+
+	ent0 := globalDaxSrcEntryList.head
+	assert.Equal(t, ent0.name, "cliargs")
+	assert.IsType(t, ent0.ds, FooDaxSrc{})
+	assert.False(t, ent0.local)
+	assert.Nil(t, ent0.prev)
+	assert.Nil(t, ent0.next)
+
+	Uses("database", &FooDaxSrc{})
+
+	ent0 = globalDaxSrcEntryList.head
+	assert.Equal(t, ent0.name, "cliargs")
+	assert.IsType(t, ent0.ds, FooDaxSrc{})
+	assert.False(t, ent0.local)
+	assert.Nil(t, ent0.prev)
+
+	ent1 := ent0.next
+	assert.Equal(t, ent1.name, "database")
+	assert.IsType(t, ent1.ds, &FooDaxSrc{})
+	assert.False(t, ent1.local)
+	assert.Equal(t, ent1.prev, ent0)
+	assert.Nil(t, ent1.next)
+
+	Uses("file", &BarDaxSrc{})
+
+	ent0 = globalDaxSrcEntryList.head
+	assert.Equal(t, ent0.name, "cliargs")
+	assert.IsType(t, ent0.ds, FooDaxSrc{})
+	assert.False(t, ent0.local)
+	assert.Nil(t, ent0.prev)
+
+	ent1 = ent0.next
+	assert.Equal(t, ent1.name, "database")
+	assert.IsType(t, ent1.ds, &FooDaxSrc{})
+	assert.False(t, ent1.local)
+	assert.Equal(t, ent1.prev, ent0)
+
+	ent2 := ent1.next
+	assert.Equal(t, ent2.name, "file")
+	assert.IsType(t, ent2.ds, &BarDaxSrc{})
+	assert.False(t, ent2.local)
+	assert.Equal(t, ent2.prev, ent1)
+}
+
+func TestUses_nameAlreadyExists(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	Uses("database", FooDaxSrc{})
+
+	ent0 := globalDaxSrcEntryList.head
+	assert.Equal(t, ent0.name, "database")
+	assert.IsType(t, ent0.ds, FooDaxSrc{})
+	assert.False(t, ent0.local)
+	assert.Nil(t, ent0.prev)
+	assert.Nil(t, ent0.next)
+
+	Uses("database", &FooDaxSrc{})
+
+	ent0 = globalDaxSrcEntryList.head
+	assert.Equal(t, ent0.name, "database")
+	assert.IsType(t, ent0.ds, FooDaxSrc{})
+	assert.False(t, ent0.local)
+	assert.Nil(t, ent0.prev)
+
+	ent1 := ent0.next
+	assert.Equal(t, ent1.name, "database")
+	assert.IsType(t, ent1.ds, &FooDaxSrc{})
+	assert.False(t, ent1.local)
+	assert.Equal(t, ent1.prev, ent0)
+	assert.Nil(t, ent1.next)
+}
+
+func TestSetup_zeroDs(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Nil(t, Logs.Front())
+
+	err := Setup()
 	assert.True(t, err.IsOk())
+	defer Close()
 
-	assert.True(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
-
-	sabi.AddGlobalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.True(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	assert.Nil(t, log.Next())
+	assert.True(t, isGlobalDaxSrcsFixed)
+	assert.Nil(t, Logs.Front())
 }
 
-func TestStartUpGlobalDaxSrcs_failToSetUpDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestSetup_oneDs(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	WillFailToSetUpFooDaxSrc = true
+	Uses("cliargs", FooDaxSrc{})
 
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Nil(t, Logs.Front())
 
-	sabi.AddGlobalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
-
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
-
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 2)
-
-	err := sabi.StartUpGlobalDaxSrcs()
-	assert.False(t, err.IsOk())
-	switch err.Reason().(type) {
-	case sabi.FailToStartUpGlobalDaxSrcs:
-		errs := err.Reason().(sabi.FailToStartUpGlobalDaxSrcs).Errors
-		assert.Equal(t, len(errs), 1)
-		err1 := errs["foo"]
-		r := err1.Reason().(FailToDoSomething)
-		assert.Equal(t, r.Text, "FailToSetUpFooDaxSrc")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-	log = log.Next()
-	if log.Value == "FooDaxSrc#End" {
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-	}
-	assert.Nil(t, log.Next())
-}
-
-func TestShutdownGlobalDaxSrcs(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 0)
-
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
-
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 1)
-
-	sabi.AddGlobalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.False(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 2)
-
-	err := sabi.StartUpGlobalDaxSrcs()
+	err := Setup()
 	assert.True(t, err.IsOk())
+	defer Close()
 
-	assert.True(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 2)
-
-	sabi.ShutdownGlobalDaxSrcs()
-
-	assert.True(t, sabi.IsGlobalDaxSrcsFixed())
-	assert.Equal(t, len(sabi.GlobalDaxSrcMap()), 2)
-
+	assert.True(t, isGlobalDaxSrcsFixed)
 	log := Logs.Front()
-	if log.Value == "FooDaxSrc#SetUp" {
-		assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	}
-	log = log.Next()
-	if log.Value == "FooDaxSrc#End" {
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-	}
-	assert.Nil(t, log.Next())
-}
-
-func TestDaxBase_SetUpLocalDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 2)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
 	log = log.Next()
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_SetUpLocalDaxSrc_unableToAddLocalDaxSrcInTxn(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestSetup_multipleDs(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	base := sabi.NewDaxBase()
+	Uses("cliargs", FooDaxSrc{})
+	Uses("database", &BarDaxSrc{})
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Nil(t, Logs.Front())
 
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	err := Setup()
+	assert.True(t, err.IsOk())
+	defer Close()
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	sabi.Begin(base)
-
-	assert.True(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.True(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
+	assert.True(t, isGlobalDaxSrcsFixed)
 	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestSetup_cannotAddAfterSetup(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	Uses("cliargs", FooDaxSrc{})
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+	assert.Nil(t, Logs.Front())
+
+	err := Setup()
+	assert.True(t, err.IsOk())
+
+	assert.True(t, isGlobalDaxSrcsFixed)
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
 	log = log.Next()
 	assert.Nil(t, log)
 
-	sabi.End(base)
+	ent := globalDaxSrcEntryList.head
+	assert.IsType(t, ent.ds, FooDaxSrc{})
+	assert.Nil(t, ent.next)
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
+	Uses("database", &FooDaxSrc{})
 
-	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 2)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
+	assert.True(t, isGlobalDaxSrcsFixed)
 	log = Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
+	assert.Nil(t, log)
+
+	ent = globalDaxSrcEntryList.head
+	assert.IsType(t, ent.ds, FooDaxSrc{})
+	assert.Nil(t, ent.next)
+}
+
+func TestSetup_error_sync(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	WillFailToSetupFooDaxSrc = true
+
+	Uses("cliargs", FooDaxSrc{})
+
+	err := Setup()
+	assert.True(t, err.IsNotOk())
+	assert.IsType(t, err.Reason(), FailToSetupGlobalDaxSrcs{})
+	errmap := err.Reason().(FailToSetupGlobalDaxSrcs).Errors
+	assert.Equal(t, len(errmap), 1)
+	assert.IsType(t, errmap["cliargs"].Reason(), FailToSetupFooDaxSrc{})
+
+	assert.True(t, isGlobalDaxSrcsFixed)
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
 	log = log.Next()
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_SetUpLocalDaxSrc_failToSetUpDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestSetup_error_async(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	WillFailToSetUpFooDaxSrc = true
+	WillFailToSetupBarDaxSrc = true
 
-	base := sabi.NewDaxBase()
+	Uses("cliargs", &BarDaxSrc{})
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
+	err := Setup()
+	assert.True(t, err.IsNotOk())
+	assert.IsType(t, err.Reason(), FailToSetupGlobalDaxSrcs{})
+	errmap := err.Reason().(FailToSetupGlobalDaxSrcs).Errors
+	assert.Equal(t, len(errmap), 1)
+	assert.IsType(t, errmap["cliargs"].Reason(), FailToSetupBarDaxSrc{})
 
-	err := base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	assert.False(t, err.IsOk())
-
-	switch err.Reason().(type) {
-	case FailToDoSomething:
-		r := err.Reason().(FailToDoSomething)
-		assert.Equal(t, r.Text, "FailToSetUpFooDaxSrc")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeAllLocalDaxSrcs()
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
+	assert.True(t, isGlobalDaxSrcsFixed)
 	log := Logs.Front()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#End")
-	assert.Nil(t, log.Next())
-}
-
-func TestDaxBase_FreeLocalDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeLocalDaxSrc("foo")
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("bar", &BarDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 2)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeLocalDaxSrc("bar")
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeLocalDaxSrc("foo")
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "FooDaxSrc#End")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#End")
-	log = log.Next()
-	assert.Equal(t, log.Value, "FooDaxSrc#End")
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
 	log = log.Next()
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_FreeLocalDaxSrc_unableToFreeLocalDaxSrcInTxn(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestSetup_error_asyncAndSync(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	base := sabi.NewDaxBase()
+	WillFailToSetupBarDaxSrc = true
+	WillFailToSetupFooDaxSrc = true
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
+	Uses("cliargs", &BarDaxSrc{})
+	Uses("database", FooDaxSrc{})
 
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+	err := Setup()
+	assert.True(t, err.IsNotOk())
+	assert.IsType(t, err.Reason(), FailToSetupGlobalDaxSrcs{})
+	errmap := err.Reason().(FailToSetupGlobalDaxSrcs).Errors
+	assert.Equal(t, len(errmap), 2)
+	assert.IsType(t, errmap["cliargs"].Reason(), FailToSetupBarDaxSrc{})
+	assert.IsType(t, errmap["database"].Reason(), FailToSetupFooDaxSrc{})
 
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	sabi.Begin(base)
-
-	assert.True(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeLocalDaxSrc("foo")
-
-	assert.True(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	sabi.End(base)
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 1)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
-
-	base.FreeLocalDaxSrc("foo")
-
-	assert.False(t, sabi.IsLocalDaxSrcsFixed(base))
-	assert.Equal(t, len(sabi.LocalDaxSrcMap(base)), 0)
-	assert.Equal(t, len(sabi.DaxConnMap(base)), 0)
+	assert.True(t, isGlobalDaxSrcsFixed)
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
 }
 
-func TestDaxBase_GetDaxConn_withLocalDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestStartApp_ok(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	base := sabi.NewDaxBase()
+	Uses("database", FooDaxSrc{})
 
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	switch err.Reason().(type) {
-	case sabi.DaxSrcIsNotFound:
-		assert.Equal(t, err.Get("Name"), "foo")
+	app := func() errs.Err {
+		Logs.PushBack("run app")
+		return errs.Ok()
+	}
+
+	err := StartApp(app)
+	assert.True(t, err.IsOk())
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "run app")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestStartApp_error_failToSetup(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	WillFailToSetupFooDaxSrc = true
+
+	Uses("database", FooDaxSrc{})
+
+	app := func() errs.Err {
+		Logs.PushBack("run app")
+		return errs.Ok()
+	}
+
+	err := StartApp(app)
+	assert.True(t, err.IsNotOk())
+	assert.IsType(t, err.Reason(), FailToSetupGlobalDaxSrcs{})
+	errmap := err.Reason().(FailToSetupGlobalDaxSrcs).Errors
+	assert.Equal(t, len(errmap), 1)
+	assert.IsType(t, errmap["database"].Reason(), FailToSetupFooDaxSrc{})
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestStartApp_error_appReturnsError(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	Uses("database", FooDaxSrc{})
+
+	type FailToDoSomething struct{}
+
+	app := func() errs.Err {
+		return errs.New(FailToDoSomething{})
+	}
+
+	err := StartApp(app)
+	assert.True(t, err.IsNotOk())
+	assert.IsType(t, err.Reason(), FailToDoSomething{})
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestNewDaxBase_withNoGlobalDs(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	assert.True(t, isGlobalDaxSrcsFixed)
+
+	assert.False(t, base.isLocalDaxSrcsFixed)
+	assert.Nil(t, base.localDaxSrcEntryList.head)
+	assert.Nil(t, base.localDaxSrcEntryList.last)
+	assert.Equal(t, len(base.daxSrcEntryMap), 0)
+	assert.Equal(t, base.daxConnMap.Len(), 0)
+
+	log := Logs.Front()
+	assert.Nil(t, log)
+}
+
+func TestNewDaxBase_withSomeGlobalDs(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	assert.False(t, isGlobalDaxSrcsFixed)
+
+	Uses("cliargs", FooDaxSrc{})
+	Uses("database", &BarDaxSrc{})
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+		defer base.Close()
+
+		assert.True(t, isGlobalDaxSrcsFixed)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.IsType(t, base.daxSrcEntryMap["cliargs"].ds, FooDaxSrc{})
+		assert.IsType(t, base.daxSrcEntryMap["database"].ds, &BarDaxSrc{})
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Nil(t, log)
+}
+
+func TestDax_Uses_ok(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 1)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+
+		err = base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Close()
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestDax_Uses_doNothingWhileFixed(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+		defer base.Close()
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		base.begin()
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		base.end()
+	}()
+
+	log := Logs.Front()
+	assert.Nil(t, log)
+}
+
+func TestDax_Uses_failToSetupLocalDaxSrc_sync(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+		defer base.Close()
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		WillFailToSetupFooDaxSrc = true
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsNotOk())
+		switch r := err.Reason().(type) {
+		case FailToSetupLocalDaxSrc:
+			assert.Equal(t, r.Name, "cliargs")
+		default:
+			assert.Fail(t, err.Error())
+		}
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		ent := base.localDaxSrcEntryList.head
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Nil(t, log)
+}
+
+func TestDax_Uses_failToSetupLocalDaxSrc_async(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+		defer base.Close()
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		WillFailToSetupBarDaxSrc = true
+
+		err := base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsNotOk())
+		switch r := err.Reason().(type) {
+		case FailToSetupLocalDaxSrc:
+			assert.Equal(t, r.Name, "database")
+		default:
+			assert.Fail(t, err.Error())
+		}
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		ent := base.localDaxSrcEntryList.head
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Nil(t, log)
+}
+
+func TestDax_Uses_createRunner(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		runner := base.Uses_("cliargs", FooDaxSrc{})
+		err := runner()
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 1)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+
+		runner = base.Uses_("database", &BarDaxSrc{})
+		err = runner()
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Close()
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestDax_Disuses_ok(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		err = base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		err = base.Uses("file", &FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Disuses("database")
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Disuses("cliargs")
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Disuses("file")
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.True(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestDax_Disuses_doNothingWhileFixed(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 1)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+
+		err = base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		base.begin()
+		assert.True(t, base.isLocalDaxSrcsFixed)
+
+		base.Disuses("cliargs")
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		base.Disuses("database")
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestDax_Disuses_createRunner(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		err = base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		err = base.Uses("file", &FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		runner := base.Disuses_("database")
+		err = runner()
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		runner = base.Disuses_("cliargs")
+		err = runner()
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.False(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, &FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		runner = base.Disuses_("file")
+		err = runner()
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 3)
+		assert.True(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.True(t, base.daxSrcEntryMap["database"].deleted)
+		assert.True(t, base.daxSrcEntryMap["file"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestDax_Close_doNothingWhileFixed(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase().(*daxBaseImpl)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		assert.Nil(t, base.localDaxSrcEntryList.head)
+		assert.Nil(t, base.localDaxSrcEntryList.last)
+		assert.Equal(t, len(base.daxSrcEntryMap), 0)
+		assert.Equal(t, base.daxConnMap.Len(), 0)
+
+		err := base.Uses("cliargs", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 1)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		ent := base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+
+		err = base.Uses("database", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+
+		assert.False(t, base.isLocalDaxSrcsFixed)
+		base.begin()
+		assert.True(t, base.isLocalDaxSrcsFixed)
+
+		base.Close()
+
+		assert.Equal(t, len(base.daxSrcEntryMap), 2)
+		assert.False(t, base.daxSrcEntryMap["cliargs"].deleted)
+		assert.False(t, base.daxSrcEntryMap["database"].deleted)
+		ent = base.localDaxSrcEntryList.head
+		assert.IsType(t, ent.ds, FooDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.IsType(t, ent.ds, &BarDaxSrc{})
+		assert.False(t, ent.deleted)
+		ent = ent.next
+		assert.Nil(t, ent)
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestGetDaxConn_ok(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	err := base.Uses("cliargs", FooDaxSrc{})
+	assert.True(t, err.IsOk())
+	err = base.Uses("database", &BarDaxSrc{})
+	assert.True(t, err.IsOk())
+	err = base.Uses("file", &FooDaxSrc{})
+	assert.True(t, err.IsOk())
+
+	base.begin()
+	defer base.end()
+
+	conn1, err := GetDaxConn[FooDaxConn](base, "cliargs")
+	assert.True(t, err.IsOk())
+	assert.IsType(t, conn1, FooDaxConn{})
+
+	conn2, err := GetDaxConn[*BarDaxConn](base, "database")
+	assert.True(t, err.IsOk())
+	assert.IsType(t, conn2, &BarDaxConn{})
+
+	conn3, err := GetDaxConn[FooDaxConn](base, "file")
+	assert.True(t, err.IsOk())
+	assert.IsType(t, conn3, FooDaxConn{})
+}
+
+func TestGetDaxConn_daxConnIsAlreadyCreated(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	err := base.Uses("cliargs", FooDaxSrc{})
+	assert.True(t, err.IsOk())
+
+	base.begin()
+	defer base.end()
+
+	conn1, err := GetDaxConn[FooDaxConn](base, "cliargs")
+	assert.True(t, err.IsOk())
+	assert.IsType(t, conn1, FooDaxConn{})
+
+	conn2, err := GetDaxConn[FooDaxConn](base, "cliargs")
+	assert.True(t, err.IsOk())
+	assert.IsType(t, conn2, FooDaxConn{})
+	assert.Equal(t, &conn1, &conn2)
+}
+
+func TestGetDaxConn_daxSrcIsNotFound(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	base.begin()
+	defer base.end()
+
+	_, err := GetDaxConn[FooDaxConn](base, "cliargs")
+	switch r := err.Reason().(type) {
+	case DaxSrcIsNotFound:
+		assert.Equal(t, r.Name, "cliargs")
 	default:
 		assert.Fail(t, err.Error())
 	}
-
-	err = sabi.StartUpGlobalDaxSrcs()
-
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	switch err.Reason().(type) {
-	case sabi.DaxSrcIsNotFound:
-		assert.Equal(t, err.Get("Name"), "foo")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	var conn2 sabi.DaxConn
-	conn2, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.Equal(t, conn2, conn)
-	assert.True(t, err.IsOk())
 }
 
-func TestDaxBase_getDaxConn_withGlobalDaxSrc(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestGetDaxConn_daxSrcIsDisused(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	base := sabi.NewDaxBase()
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
 
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	switch err.Reason().(type) {
-	case sabi.DaxSrcIsNotFound:
-		assert.Equal(t, err.Get("Name"), "foo")
-	default:
-		assert.Fail(t, err.Error())
-	}
-
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{})
-
-	err = sabi.StartUpGlobalDaxSrcs()
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
+	err := base.Uses("cliargs", FooDaxSrc{})
 	assert.True(t, err.IsOk())
 
-	var conn2 sabi.DaxConn
-	conn2, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.Equal(t, conn2, conn)
-	assert.True(t, err.IsOk())
+	func() {
+		base.begin()
+		defer base.end()
+
+		conn, err := GetDaxConn[FooDaxConn](base, "cliargs")
+		assert.True(t, err.IsOk())
+		assert.IsType(t, conn, FooDaxConn{})
+	}()
+
+	base.Disuses("cliargs")
+
+	func() {
+		base.begin()
+		defer base.end()
+
+		_, err := GetDaxConn[FooDaxConn](base, "cliargs")
+		switch r := err.Reason().(type) {
+		case DaxSrcIsNotFound:
+			assert.Equal(t, r.Name, "cliargs")
+		default:
+			assert.Fail(t, err.Error())
+		}
+	}()
 }
 
-func TestDaxBase_getDaxConn_localDsIsTakenPriorityOfGlobalDs(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestGetDaxConn_localDaxSrcIsDisusedButGlobalDaxSrcExists(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	base := sabi.NewDaxBase()
+	Uses("database", &BarDaxSrc{})
 
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	switch err.Reason().(type) {
-	case sabi.DaxSrcIsNotFound:
-		assert.Equal(t, err.Get("Name"), "foo")
-	default:
-		assert.Fail(t, err.Error())
-	}
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
 
-	sabi.AddGlobalDaxSrc("foo", FooDaxSrc{Label: "global"})
-
-	err = sabi.StartUpGlobalDaxSrcs()
+	err := base.Uses("database", FooDaxSrc{})
 	assert.True(t, err.IsOk())
 
-	err = base.SetUpLocalDaxSrc("foo", FooDaxSrc{Label: "local"})
-	assert.True(t, err.IsOk())
+	func() {
+		base.begin()
+		defer base.end()
 
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.Equal(t, conn.Label, "local")
-	assert.True(t, err.IsOk())
+		conn, err := GetDaxConn[FooDaxConn](base, "database")
+		assert.True(t, err.IsOk())
+		assert.IsType(t, conn, FooDaxConn{})
+	}()
+
+	base.Disuses("database")
+
+	func() {
+		base.begin()
+		defer base.end()
+
+		conn, err := GetDaxConn[*BarDaxConn](base, "database")
+		assert.True(t, err.IsOk())
+		assert.IsType(t, conn, &BarDaxConn{})
+	}()
 }
 
-func TestDaxBase_getDaxConn_failToCreateDaxConn(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestGetDaxConn_failToCreateDaxConn(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	err := base.Uses("database", FooDaxSrc{})
+	assert.True(t, err.IsOk())
 
 	WillFailToCreateFooDaxConn = true
 
-	base := sabi.NewDaxBase()
+	func() {
+		base.begin()
+		defer base.end()
 
-	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
+		_, err := GetDaxConn[FooDaxConn](base, "database")
+		switch r := err.Reason().(type) {
+		case FailToCreateDaxConn:
+			assert.Equal(t, r.Name, "database")
+			assert.IsType(t, err.Cause().(errs.Err).Reason(), FailToCreateFooDaxConn{})
+		default:
+			assert.Fail(t, err.Error())
+		}
+	}()
+}
 
-	_, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	switch err.Reason().(type) {
-	case sabi.FailToCreateDaxConn:
-		assert.Equal(t, err.Get("Name"), "foo")
-		switch err.Cause().(sabi.Err).Reason().(type) {
+func TestGetDaxConn_createdDaxConnIsNil(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	err := base.Uses("database", FooDaxSrc{})
+	assert.True(t, err.IsOk())
+
+	WillCreatedFooDaxConnBeNil = true
+
+	func() {
+		base.begin()
+		defer base.end()
+
+		_, err := GetDaxConn[FooDaxConn](base, "database")
+		switch r := err.Reason().(type) {
+		case CreatedDaxConnIsNil:
+			assert.Equal(t, r.Name, "database")
+		default:
+			assert.Fail(t, err.Error())
+		}
+	}()
+}
+
+func TestGetDaxConn_failToCastDaxConn(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase().(*daxBaseImpl)
+	defer base.Close()
+
+	err := base.Uses("database", FooDaxSrc{})
+	assert.True(t, err.IsOk())
+
+	func() {
+		base.begin()
+		defer base.end()
+
+		_, err := GetDaxConn[*BarDaxConn](base, "database")
+		switch r := err.Reason().(type) {
+		case FailToCastDaxConn:
+			assert.Equal(t, r.Name, "database")
+			assert.Equal(t, r.FromType, "sabi.FooDaxConn")
+			assert.Equal(t, r.ToType, "*sabi.BarDaxConn")
+		default:
+			assert.Fail(t, err.Error())
+		}
+	}()
+}
+
+func TestTxn_zeroLogic(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase()
+	defer base.Close()
+
+	err := Txn[Dax](base)
+	assert.True(t, err.IsOk())
+}
+
+func TestTxn_oneLogic(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := base.Uses("database", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		err = Txn(base, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax, "database")
+			assert.True(t, err.IsOk())
+			return errs.Ok()
+		})
+		assert.True(t, err.IsOk())
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Commit")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestTxn_twoLogic(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := base.Uses("database", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+		err = err.IfOk(base.Uses_("file", &BarDaxSrc{}))
+		assert.True(t, err.IsOk())
+
+		err = Txn(base, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax, "database")
+			assert.True(t, err.IsOk())
+			return errs.Ok()
+		}, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+			assert.True(t, err.IsOk())
+			return errs.Ok()
+		})
+		assert.True(t, err.IsOk())
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Commit")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Commit")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+type LogicDax interface {
+	Dax
+	getData() string
+}
+
+func TestTxn_failToCastDaxBase(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := Txn(base, func(dax LogicDax) errs.Err {
+			return errs.Ok()
+		})
+		switch r := err.Reason().(type) {
+		case FailToCastDaxBase:
+			assert.Equal(t, r.FromType, "sabi.DaxBase")
+			assert.Equal(t, r.ToType, "sabi.LogicDax")
+		default:
+			assert.Fail(t, err.Error())
+		}
+	}()
+}
+
+func TestTxn_failToRunLogic(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase()
+	defer base.Close()
+
+	type FailToDoSomething struct{}
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := base.Uses("database", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+		err = err.IfOk(base.Uses_("file", &BarDaxSrc{}))
+		assert.True(t, err.IsOk())
+
+		err = Txn(base, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax, "database")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 1")
+			return errs.New(FailToDoSomething{})
+		}, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 2")
+			return errs.Ok()
+		})
+		switch err.Reason().(type) {
 		case FailToDoSomething:
 		default:
 			assert.Fail(t, err.Error())
 		}
-	default:
-		assert.Fail(t, err.Error())
-	}
-}
-
-func TestDaxBase_getDaxConn_commit(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-
-	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	err = base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	sabi.Begin(base)
-
-	var conn sabi.DaxConn
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	err = sabi.Commit(base)
-	assert.True(t, err.IsOk())
+	}()
 
 	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
 	log = log.Next()
 	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
+	assert.Equal(t, log.Value, "run logic 1")
 	log = log.Next()
-	if log.Value == "FooDaxConn#Commit" {
-		assert.Equal(t, log.Value, "FooDaxConn#Commit")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxConn#Commit")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxConn#Commit")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxConn#Commit")
-	}
+	assert.Equal(t, log.Value, "FooDaxConn#Rollback")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
 	log = log.Next()
 	assert.Nil(t, log)
 }
 
-func TestDaxBase_getDaxConn_failToCommit(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
+func TestTxn_failToCommit_sync(t *testing.T) {
+	Reset()
+	defer Reset()
 
-	WillFailToCommitFooDaxConn = true
+	base := NewDaxBase()
+	defer base.Close()
 
-	base := sabi.NewDaxBase()
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
 
-	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	assert.True(t, err.IsOk())
+		err := base.Uses("database", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+		err = base.Uses("file", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
 
-	err = base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	assert.True(t, err.IsOk())
+		WillFailToCommitFooDaxConn = true
 
-	sabi.Begin(base)
-
-	var conn sabi.DaxConn
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	err = sabi.Commit(base)
-	assert.False(t, err.IsOk())
-	switch err.Reason().(type) {
-	case sabi.FailToCommitDaxConn:
-		m := err.Get("Errors").(map[string]sabi.Err)
-		assert.Equal(t, m["foo"].ReasonName(), "FailToDoSomething")
-	default:
-		assert.Fail(t, err.Error())
-	}
+		err = Txn(base, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax, "database")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 1")
+			return errs.Ok()
+		}, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 2")
+			return errs.Ok()
+		})
+	}()
 
 	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "run logic 1")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "run logic 2")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Rollback")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Rollback")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestTxn_failToCommit_async(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	base := NewDaxBase()
+	defer base.Close()
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := base.Uses("database", FooDaxSrc{})
+		assert.True(t, err.IsOk())
+		err = base.Uses("file", &BarDaxSrc{})
+		assert.True(t, err.IsOk())
+
+		WillFailToCommitBarDaxConn = true
+
+		err = Txn(base, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax, "database")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 1")
+			return errs.Ok()
+		}, func(dax Dax) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+			assert.True(t, err.IsOk())
+			Logs.PushBack("run logic 2")
+			return errs.Ok()
+		})
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "run logic 1")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "run logic 2")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Commit")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#ForceBack")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Rollback")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxConn#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
+	log = log.Next()
+	assert.Nil(t, log)
+}
+
+func TestTxn_runner(t *testing.T) {
+	Reset()
+	defer Reset()
+
+	Reset()
+	defer Reset()
+
+	func() {
+		base := NewDaxBase()
+		defer base.Close()
+
+		err := base.Uses("database", FooDaxSrc{}).
+			IfOk(base.Uses_("file", &BarDaxSrc{})).
+			IfOk(Txn_(base, func(dax Dax) errs.Err {
+				_, err := GetDaxConn[FooDaxConn](dax, "database")
+				assert.True(t, err.IsOk())
+				return errs.Ok()
+			}, func(dax Dax) errs.Err {
+				_, err := GetDaxConn[*BarDaxConn](dax, "file")
+				assert.True(t, err.IsOk())
+				return errs.Ok()
+			}))
+
+		assert.True(t, err.IsOk())
+	}()
+
+	log := Logs.Front()
+	assert.Equal(t, log.Value, "FooDaxSrc#Setup")
+	log = log.Next()
+	assert.Equal(t, log.Value, "BarDaxSrc#Setup")
 	log = log.Next()
 	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
 	log = log.Next()
 	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
+	log = log.Next()
+	assert.Equal(t, log.Value, "FooDaxConn#Commit")
 	log = log.Next()
 	assert.Equal(t, log.Value, "BarDaxConn#Commit")
 	log = log.Next()
-	assert.Nil(t, log)
-}
-
-func TestDaxBase_getDaxConn_rollback(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-
-	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	assert.True(t, err.IsOk())
-	err = base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	sabi.Begin(base)
-
-	var conn sabi.DaxConn
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	sabi.Rollback(base)
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "FooDaxConn#Close")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
+	assert.Equal(t, log.Value, "BarDaxConn#Close")
 	log = log.Next()
-	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
+	assert.Equal(t, log.Value, "FooDaxSrc#Close")
 	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
-	log = log.Next()
-	if log.Value == "FooDaxConn#Rollback" {
-		assert.Equal(t, log.Value, "FooDaxConn#Rollback")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxConn#Rollback")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxConn#Rollback")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxConn#Rollback")
-	}
+	assert.Equal(t, log.Value, "BarDaxSrc#Close")
 	log = log.Next()
 	assert.Nil(t, log)
-}
-
-func TestDaxBase_getDaxConn_end(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-
-	err := base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	err = base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	assert.True(t, err.IsOk())
-
-	sabi.Begin(base)
-
-	var conn sabi.DaxConn
-	conn, err = sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	conn, err = sabi.GetDaxConn[*BarDaxConn](base, "bar")
-	assert.NotNil(t, conn)
-	assert.True(t, err.IsOk())
-
-	err = sabi.Commit(base)
-	assert.True(t, err.IsOk())
-
-	sabi.End(base)
-	assert.True(t, err.IsOk())
-
-	base.FreeAllLocalDaxSrcs()
-
-	log := Logs.Front()
-	assert.Equal(t, log.Value, "FooDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#SetUp")
-	log = log.Next()
-	assert.Equal(t, log.Value, "FooDaxSrc#CreateDaxConn")
-	log = log.Next()
-	assert.Equal(t, log.Value, "BarDaxSrc#CreateDaxConn")
-	log = log.Next()
-	if log.Value == "FooDaxConn#Commit" {
-		assert.Equal(t, log.Value, "FooDaxConn#Commit")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxConn#Commit")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxConn#Commit")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxConn#Commit")
-	}
-	log = log.Next()
-	if log.Value == "FooDaxConn#Close" {
-		assert.Equal(t, log.Value, "FooDaxConn#Close")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxConn#Close")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxConn#Close")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxConn#Close")
-	}
-	log = log.Next()
-	if log.Value == "FooDaxSrc#End" {
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-	} else {
-		assert.Equal(t, log.Value, "BarDaxSrc#End")
-		log = log.Next()
-		assert.Equal(t, log.Value, "FooDaxSrc#End")
-	}
-	log = log.Next()
-	assert.Nil(t, log)
-}
-
-func TestDax_runTxn(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	hogeDs := NewMapDaxSrc()
-	fugaDs := NewMapDaxSrc()
-	piyoDs := NewMapDaxSrc()
-
-	base := NewHogeFugaPiyoDaxBase()
-
-	var err sabi.Err
-	if err = base.SetUpLocalDaxSrc("hoge", hogeDs); err.IsNotOk() {
-		assert.Fail(t, err.Error())
-		return
-	}
-	if err = base.SetUpLocalDaxSrc("fuga", fugaDs); err.IsNotOk() {
-		assert.Fail(t, err.Error())
-		return
-	}
-	if err = base.SetUpLocalDaxSrc("piyo", piyoDs); err.IsNotOk() {
-		assert.Fail(t, err.Error())
-		return
-	}
-
-	hogeDs.dataMap["hogehoge"] = "Hello, world"
-
-	if err = sabi.RunTxn(base, HogeFugaLogic); err.IsNotOk() {
-		assert.Fail(t, err.Error())
-		return
-	}
-	if err = sabi.RunTxn(base, FugaPiyoLogic); err.IsNotOk() {
-		assert.Fail(t, err.Error())
-		return
-	}
-
-	assert.Equal(t, piyoDs.dataMap["piyopiyo"], "Hello, world")
-}
-
-func TestGetDaxConn_whenDaxConnIsValue(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.True(t, err.IsOk())
-	assert.NotNil(t, conn)
-	assert.Equal(t, fmt.Sprintf("%T", conn), "sabi_test.FooDaxConn")
-}
-
-func TestGetDaxConn_whenDaxConnIsValueButError(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	conn, err := sabi.GetDaxConn[*BarDaxConn](base, "foo")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "foo")
-	assert.Equal(t, err.Get("FromType"),
-		"FooDaxConn (github.com/sttk/sabi_test)")
-	assert.Equal(t, err.Get("ToType"),
-		"*BarDaxConn (github.com/sttk/sabi_test)")
-	assert.Nil(t, conn)
-}
-
-func TestGetDaxConn_whenDaxConnIsValueButPointer(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	conn, err := sabi.GetDaxConn[*FooDaxConn](base, "foo")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "foo")
-	assert.Equal(t, err.Get("FromType"),
-		"FooDaxConn (github.com/sttk/sabi_test)")
-	assert.Equal(t, err.Get("ToType"),
-		"*FooDaxConn (github.com/sttk/sabi_test)")
-	assert.Nil(t, conn)
-}
-
-func TestGetDaxConn_whenDaxConnIsPointer(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	conn, err := sabi.GetDaxConn[*BarDaxConn](base, "bar")
-	assert.True(t, err.IsOk())
-	assert.NotNil(t, conn)
-	assert.Equal(t, fmt.Sprintf("%T", conn), "*sabi_test.BarDaxConn")
-}
-
-func TestGetDaxConn_whenDaxConnIsPointerButError(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	conn, err := sabi.GetDaxConn[*FooDaxConn](base, "bar")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "bar")
-	assert.Equal(t, err.Get("FromType"),
-		"*BarDaxConn (github.com/sttk/sabi_test)")
-	assert.Equal(t, err.Get("ToType"),
-		"*FooDaxConn (github.com/sttk/sabi_test)")
-	assert.Nil(t, conn)
-}
-
-/* Raise compile error
-func TestGetDaxConn_whenDaxConnIsPointerButValue(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("bar", BarDaxSrc{})
-	conn, err := sabi.GetDaxConn[BarDaxConn](base, "bar")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "FailToCastDaxConn")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "bar")
-	assert.Equal(t, err.Get("FromType"),
-		"*BarDaxConn (github.com/sttk/sabi_test)")
-	assert.Equal(t, err.Get("ToType"),
-		"BarDaxConn (github.com/sttk/sabi_test)")
-	assert.NotNil(t, conn)
-}
-*/
-
-func TestGetDaxConn_whenDaxConnIsNotFound(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	base := sabi.NewDaxBase()
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "DaxSrcIsNotFound")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "foo")
-	assert.NotNil(t, conn)
-}
-
-func TestGetDaxConn_whenDaxConnIsFailedToCreate(t *testing.T) {
-	ClearDaxBase()
-	defer ClearDaxBase()
-
-	WillFailToCreateFooDaxConn = true
-
-	base := sabi.NewDaxBase()
-	base.SetUpLocalDaxSrc("foo", FooDaxSrc{})
-	conn, err := sabi.GetDaxConn[FooDaxConn](base, "foo")
-	assert.True(t, err.IsNotOk())
-	assert.Equal(t, err.ReasonName(), "FailToCreateDaxConn")
-	assert.Equal(t, err.ReasonPackage(), "github.com/sttk/sabi")
-	assert.Equal(t, err.Get("Name"), "foo")
-	assert.NotNil(t, conn)
 }

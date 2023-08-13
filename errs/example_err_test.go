@@ -1,27 +1,27 @@
-package sabi_test
+package errs_test
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/sttk/sabi"
+	"github.com/sttk/sabi/errs"
 )
 
-func ExampleNewErr() {
+func ExampleNew() {
 	type /* error reasons */ (
-		FailToDoSomething           struct{}
-		FailToDoSomethingWithParams struct {
+		FailToDoSomething  struct{}
+		FailToDoWithParams struct {
 			Param1 string
 			Param2 int
 		}
 	)
 
 	// (1) Creates an Err with no situation parameter.
-	err := sabi.NewErr(FailToDoSomething{})
+	err := errs.New(FailToDoSomething{})
 	fmt.Printf("(1) %v\n", err)
 
 	// (2) Creates an Err with situation parameters.
-	err = sabi.NewErr(FailToDoSomethingWithParams{
+	err = errs.New(FailToDoWithParams{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -30,24 +30,24 @@ func ExampleNewErr() {
 	cause := errors.New("Causal error")
 
 	// (3) Creates an Err with a causal error.
-	err = sabi.NewErr(FailToDoSomething{}, cause)
+	err = errs.New(FailToDoSomething{}, cause)
 	fmt.Printf("(3) %v\n", err)
 
 	// (4) Creates an Err with situation parameters and a causal error.
-	err = sabi.NewErr(FailToDoSomethingWithParams{
+	err = errs.New(FailToDoWithParams{
 		Param1: "ABC",
 		Param2: 123,
 	}, cause)
 	fmt.Printf("(4) %v\n", err)
 	// Output:
 	// (1) {reason=FailToDoSomething}
-	// (2) {reason=FailToDoSomethingWithParams, Param1=ABC, Param2=123}
+	// (2) {reason=FailToDoWithParams, Param1=ABC, Param2=123}
 	// (3) {reason=FailToDoSomething, cause=Causal error}
-	// (4) {reason=FailToDoSomethingWithParams, Param1=ABC, Param2=123, cause=Causal error}
+	// (4) {reason=FailToDoWithParams, Param1=ABC, Param2=123, cause=Causal error}
 }
 
 func ExampleOk() {
-	err := sabi.Ok()
+	err := errs.Ok()
 	fmt.Printf("err = %v\n", err)
 	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
 	// Output:
@@ -60,7 +60,7 @@ func ExampleErr_Cause() {
 
 	cause := errors.New("Causal error")
 
-	err := sabi.NewErr(FailToDoSomething{}, cause)
+	err := errs.New(FailToDoSomething{}, cause)
 	fmt.Printf("%v\n", err.Cause())
 	// Output:
 	// Causal error
@@ -74,7 +74,7 @@ func ExampleErr_Error() {
 
 	cause := errors.New("Causal error")
 
-	err := sabi.NewErr(FailToDoSomething{
+	err := errs.New(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	}, cause)
@@ -89,7 +89,7 @@ func ExampleErr_Get() {
 		Param2 int
 	}
 
-	err := sabi.NewErr(FailToDoSomething{
+	err := errs.New(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -103,15 +103,27 @@ func ExampleErr_Get() {
 }
 
 func ExampleErr_IsOk() {
-	err := sabi.Ok()
+	err := errs.Ok()
 	fmt.Printf("%v\n", err.IsOk())
 
 	type FailToDoSomething struct{}
-	err = sabi.NewErr(FailToDoSomething{})
+	err = errs.New(FailToDoSomething{})
 	fmt.Printf("%v\n", err.IsOk())
 	// Output:
 	// true
 	// false
+}
+
+func ExampleErr_IsNotOk() {
+	err := errs.Ok()
+	fmt.Printf("%v\n", err.IsNotOk())
+
+	type FailToDoSomething struct{}
+	err = errs.New(FailToDoSomething{})
+	fmt.Printf("%v\n", err.IsNotOk())
+	// Output:
+	// false
+	// true
 }
 
 func ExampleErr_Reason() {
@@ -119,7 +131,7 @@ func ExampleErr_Reason() {
 		Param1 string
 	}
 
-	err := sabi.NewErr(FailToDoSomething{Param1: "value1"})
+	err := errs.New(FailToDoSomething{Param1: "value1"})
 	switch err.Reason().(type) {
 	case FailToDoSomething:
 		fmt.Println("The reason of the error is: FailToDoSomething")
@@ -127,7 +139,7 @@ func ExampleErr_Reason() {
 		fmt.Printf("The value of reason.Param1 is: %v\n", reason.Param1)
 	}
 
-	err = sabi.NewErr(&FailToDoSomething{Param1: "value2"})
+	err = errs.New(&FailToDoSomething{Param1: "value2"})
 	switch err.Reason().(type) {
 	case *FailToDoSomething:
 		fmt.Println("The reason of the error is: *FailToDoSomething")
@@ -144,7 +156,7 @@ func ExampleErr_Reason() {
 func ExampleErr_ReasonName() {
 	type FailToDoSomething struct{}
 
-	err := sabi.NewErr(FailToDoSomething{})
+	err := errs.New(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonName())
 	// Output:
 	// FailToDoSomething
@@ -153,10 +165,10 @@ func ExampleErr_ReasonName() {
 func ExampleErr_ReasonPackage() {
 	type FailToDoSomething struct{}
 
-	err := sabi.NewErr(FailToDoSomething{})
+	err := errs.New(FailToDoSomething{})
 	fmt.Printf("%v\n", err.ReasonPackage())
 	// Output:
-	// github.com/sttk/sabi_test
+	// github.com/sttk/sabi/errs_test
 }
 
 func ExampleErr_Situation() {
@@ -165,7 +177,7 @@ func ExampleErr_Situation() {
 		Param2 int
 	}
 
-	err := sabi.NewErr(FailToDoSomething{
+	err := errs.New(FailToDoSomething{
 		Param1: "ABC",
 		Param2: 123,
 	})
@@ -180,7 +192,7 @@ func ExampleErr_Unwrap() {
 	cause1 := errors.New("Causal error 1")
 	cause2 := errors.New("Causal error 2")
 
-	err := sabi.NewErr(FailToDoSomething{}, cause1)
+	err := errs.New(FailToDoSomething{}, cause1)
 
 	fmt.Printf("err.Unwrap() = %v\n", err.Unwrap())
 	fmt.Printf("errors.Unwrap(err) = %v\n", errors.Unwrap(err))
@@ -200,16 +212,16 @@ func ExampleErr_Unwrap() {
 func ExampleErr_IfOk() {
 	type FailToDoSomething struct{}
 
-	err := sabi.Ok()
-	err.IfOk(func() sabi.Err {
+	err := errs.Ok()
+	err.IfOk(func() errs.Err {
 		fmt.Println("execute if non error.")
-		return sabi.Ok()
+		return errs.Ok()
 	})
 
-	err = sabi.NewErr(FailToDoSomething{})
-	err.IfOk(func() sabi.Err {
+	err = errs.New(FailToDoSomething{})
+	err.IfOk(func() errs.Err {
 		fmt.Println("not execute if some error.")
-		return sabi.Ok()
+		return errs.Ok()
 	})
 	// Output:
 	// execute if non error.

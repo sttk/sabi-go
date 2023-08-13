@@ -2,78 +2,67 @@ package sabi_test
 
 import (
 	"github.com/sttk/sabi"
+	"github.com/sttk/sabi/errs"
 )
 
-func unused(v any) {}
-
-type BazDax interface {
-	GetData() string
-	SetData(data string)
-}
-
-type bazDaxImpl struct {
-}
-
-func (dax bazDaxImpl) GetData() string {
-	return ""
-}
-func (dax bazDaxImpl) SetData(data string) {
-}
-
-var base0 = sabi.NewDaxBase()
-
-var base = struct {
-	sabi.DaxBase
-	bazDaxImpl
-}{
-	DaxBase:    base0,
-	bazDaxImpl: bazDaxImpl{},
-}
-
-func ExamplePara() {
-	txn1 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
-	txn2 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
-
-	paraRunner := sabi.Para(txn1, txn2)
-
-	err := paraRunner()
-
-	// Output:
-
-	unused(err)
+func NewMyDaxBase() sabi.DaxBase {
+	return sabi.NewDaxBase()
 }
 
 func ExampleSeq() {
-	txn1 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
-	txn2 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
+	type FooDax interface {
+		sabi.Dax
+		// ...
+	}
 
-	seqRunner := sabi.Seq(txn1, txn2)
+	type BarDax interface {
+		sabi.Dax
+		// ...
+	}
 
-	err := seqRunner()
+	base := NewMyDaxBase()
 
-	// Output:
+	txn1 := sabi.Txn_[FooDax](base, func(dax FooDax) errs.Err {
+		// ...
+		return errs.Ok()
+	})
 
-	unused(err)
+	txn2 := sabi.Txn_[BarDax](base, func(dax BarDax) errs.Err {
+		// ...
+		return errs.Ok()
+	})
+
+	err := sabi.Seq(txn1, txn2)
+	if err.IsNotOk() {
+		// ...
+	}
 }
 
-func ExampleRunPara() {
-	txn1 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
-	txn2 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
+func ExamplePara() {
+	type FooDax interface {
+		sabi.Dax
+		// ...
+	}
 
-	err := sabi.RunPara(txn1, txn2)
+	type BarDax interface {
+		sabi.Dax
+		// ...
+	}
 
-	// Output:
+	base := NewMyDaxBase()
 
-	unused(err)
-}
+	txn1 := sabi.Txn_[FooDax](base, func(dax FooDax) errs.Err {
+		// ...
+		return errs.Ok()
+	})
 
-func ExampleRunSeq() {
-	txn1 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
-	txn2 := sabi.Txn(base, func(dax BazDax) sabi.Err { return sabi.Ok() })
+	txn2 := sabi.Txn_[BarDax](base, func(dax BarDax) errs.Err {
+		// ...
+		return errs.Ok()
+	})
 
-	err := sabi.RunSeq(txn1, txn2)
-
-	// Output:
-
-	unused(err)
+	err := sabi.Para(txn1, txn2)
+	if err.IsNotOk() {
+		// ...
+	}
 }

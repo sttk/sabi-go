@@ -1,74 +1,63 @@
-// Copyright (C) 2022 Takayuki Sato. All Rights Reserved.
+// Copyright (C) 2022-2023 Takayuki Sato. All Rights Reserved.
 // This program is free software under MIT License.
 // See the file LICENSE in this distribution for more details.
 
 package sabi
 
+import (
+	"github.com/sttk/sabi/errs"
+)
+
 type /* error reasons */ (
-	// FailToRunInParallel is an error reason which indicates some runner
-	// functions which run in parallel failed.
+	// FailToRunInParallel is an error reason which indicates that some of runner
+	// functions running in parallel failed.
 	FailToRunInParallel struct {
-		Errors map[int]Err
+		Errors map[int]errs.Err
 	}
 )
 
-// RunSeq is a function which runs specified runner functions sequencially.
-func RunSeq(runners ...func() Err) Err {
+// Seq is the function which runs argument functions sequencially.
+func Seq(runners ...func() errs.Err) errs.Err {
 	for _, runner := range runners {
 		err := runner()
 		if err.IsNotOk() {
 			return err
 		}
 	}
-	return Ok()
+
+	return errs.Ok()
 }
 
-// Seq is a function which creates a runner function which runs multiple
-// runner functions specified as arguments sequencially.
-func Seq(runners ...func() Err) func() Err {
-	return func() Err {
-		return RunSeq(runners...)
+// Seq_ is the function which creates a runner function which runs Seq
+// function.
+func Seq_(runners ...func() errs.Err) func() errs.Err {
+	return func() errs.Err {
+		return Seq(runners...)
 	}
 }
 
-type indexedErr struct {
-	index int
-	err   Err
+// Para is the function which runs argument functions in parallel.
+func Para(runners ...func() errs.Err) errs.Err {
+	var ag asyncGroupAsync[int]
+
+	for i, runner := range runners {
+		ag.name = i
+		ag.Add(runner)
+	}
+
+	ag.wait()
+
+	if ag.hasErr() {
+		return errs.New(FailToRunInParallel{Errors: ag.makeErrs()})
+	}
+
+	return errs.Ok()
 }
 
-func RunPara(runners ...func() Err) Err {
-	ch := make(chan indexedErr)
-
-	for i, r := range runners {
-		go func(index int, runner func() Err, ch chan indexedErr) {
-			err := runner()
-			ie := indexedErr{index: index, err: err}
-			ch <- ie
-		}(i, r, ch)
-	}
-
-	errs := make(map[int]Err)
-	n := len(runners)
-	for i := 0; i < n; i++ {
-		select {
-		case ie := <-ch:
-			if ie.err.IsNotOk() {
-				errs[ie.index] = ie.err
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		return NewErr(FailToRunInParallel{Errors: errs})
-	}
-
-	return Ok()
-}
-
-// Para is a function which creates a runner function which runs multiple
-// runner functions specified as arguments in parallel.
-func Para(runners ...func() Err) func() Err {
-	return func() Err {
-		return RunPara(runners...)
+// Para_ is the function which creates a runner function which runs Para
+// function.
+func Para_(runners ...func() errs.Err) func() errs.Err {
+	return func() errs.Err {
+		return Para(runners...)
 	}
 }
