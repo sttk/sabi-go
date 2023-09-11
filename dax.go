@@ -5,354 +5,482 @@
 package sabi
 
 import (
-	"reflect"
 	"sync"
+
+	om "github.com/sttk/orderedmap"
+
+	"github.com/sttk/sabi/errs"
 )
 
 type /* error reasons */ (
-	// FailToStartUpGlobalDaxSrcs is an error reason which indicates that some
-	// dax sources failed to start up.
-	// The field: Errors is a map of which keys are the registered names of
-	// DaxSrc(s) which failed to start up, and of which values are Err having
-	// their error reasons.
-	FailToStartUpGlobalDaxSrcs struct {
-		Errors map[string]Err
+	// FailToSetupGlobalDaxSrcs is the error reason which indicates that some
+	// DaxSrc(s) failed to set up.
+	// The field Errors is the map of which keys are the registered names of
+	// DaxSrc(s) that failed, and of which values are errs.Err having their error
+	// reasons.
+	FailToSetupGlobalDaxSrcs struct {
+		Errors map[string]errs.Err
 	}
 
-	// DaxSrcIsNotFound is an error reason which indicates that a specified data
-	// source is not found.
-	// The field: Name is a registered name of a DaxSrc not found.
+	// FailToSetupLocalDaxSrc is the error reason which indicates that a local
+	// DaxSrc failed to set up.
+	// The field Name is the registered name of the DaxSrc failed.
+	FailToSetupLocalDaxSrc struct {
+		Name string
+	}
+
+	// DaxSrcIsNotFound is the error reason which indicates that a specified
+	// DaxSrc is not found.
+	// The field Name is the registered name of the DaxSrc not found.
 	DaxSrcIsNotFound struct {
 		Name string
 	}
 
-	// FailToCreateDaxConn is an error reason which indicates that it's failed to
-	// create a new connection to a data store.
-	// The field: Name is a registered name of a DaxSrc which failed to create a
+	// FailToCreateDaxConn is the error reason which indicates that it is failed
+	// to create a new connection to a data store.
+	// The field Name is the registered name of the DaxSrc failed to create a
 	// DaxConn.
 	FailToCreateDaxConn struct {
 		Name string
 	}
 
-	// FailToCastConn is an error reason which indicates that it is failed to
-	// cast type of a DaxConn.
-	// The field: Name is a registered name of a DaxSrc which created the target
+	// FailToCommitDaxConn is the error reason which indicates that some
+	// connections failed to commit.
+	// The field Errors is the map of which keys are registered names of DaxConn
+	// which failed to commit, and of which values are errs.Err(s) having their
+	// error reasons.
+	FailToCommitDaxConn struct {
+		Errors map[string]errs.Err
+	}
+
+	// CreatedDaxConnIsNil is the error reason which indicates that a DaxSrc
+	// created a DaxConn instance but it is nil.
+	// The field Name is the registered name of the DaxSrc that created a nil
 	// DaxConn.
-	// And the fields: FromType and ToType are the types of the source DaxConn
-	// and the destination DaxConn.
+	CreatedDaxConnIsNil struct {
+		Name string
+	}
+
+	// FailToCastDaxConn is the error reason which indicates that a DaxConn
+	// instance of the specified name failed to cast to the destination type.
+	// The field Name and FromType is the name and type name of the DaxConn
+	// instance, and the field ToType is the type name of the destination type.
 	FailToCastDaxConn struct {
 		Name, FromType, ToType string
 	}
 
-	// FailToCommitDaxConn is an error reason which indicates that some
-	// connections failed to commit.
-	// The field: Errors is a map of which keys are the registered names of
-	// DaxConn which failed to commit, and of which values are Err having their
-	// error reasons.
-	FailToCommitDaxConn struct {
-		Errors map[string]Err
+	// FailToCastDaxBase is the error reason which indicates that a DaxBase instance
+	// failed to cast to the destination type.
+	// The field FromType is the type name of the DaxBase instance and the field
+	// ToType is the type name of the destination type.
+	FailToCastDaxBase struct {
+		FromType, ToType string
 	}
 )
 
-// DaxConn is an interface which represents a connection to a data store, and
-// defines methods: Commit, Rollback and Close to work in a tranaction process.
+// DaxConn is the interface that represents a connection to a data store, and
+// defines methods: Commit, Rollback and Close to work in a transaction
+// process.
+//
+// Commit is the method for commiting updates in a transaction.
+// IsCommitted is the method for check whether updates are already committed.
+// Rollback is the method for rollback updates in a transaction.
+// ForceBack is the method to revert updates forcely even if updates are
+// already commited or this connection ooes not have rollback mechanism.
+// If commting and rollbacking procedures are asynchronous, the argument
+// AsyncGroup(s) are used to process them.
+// Close is the method to close this connecton.
 type DaxConn interface {
-	Commit() Err
-	Rollback()
+	Commit(ag AsyncGroup) errs.Err
+	IsCommitted() bool
+	Rollback(ag AsyncGroup)
+	ForceBack(ag AsyncGroup)
 	Close()
 }
 
-// DaxSrc is an interface which represents a data connection source for a data
-// store like database, etc., and creates a DaxConn which is a connection to a
-// data store.
-// This interface defines a method: CreateDaxConn to creates a DaxConn instance
-// and returns its pointer.
-// This interface also defines methods: SetUp and End, which makes available
-// and frees this dax source.
+// DaxSrc is the interface that represents a data source which creates
+// connections to a data store like database, etc.
+// This interface declares three methods: Setup, Close, and CreateDaxConn.
+//
+// Setup is the method to connect to a data store and to prepare to create
+// DaxConn objects which represents a connection to access data in the data
+// store.
+// If the set up procedure is asynchronous, the Setup method is implemented
+// so as to use AsyncGroup.
+// Close is the method to disconnect to a data store.
+// CreateDaxConn is the method to create a DaxConn object.
 type DaxSrc interface {
-	CreateDaxConn() (DaxConn, Err)
-	SetUp() Err
-	End()
+	Setup(ag AsyncGroup) errs.Err
+	Close()
+	CreateDaxConn() (DaxConn, errs.Err)
 }
 
-// Dax is an interface for a set of data access methods.
-// This method gets a DaxConn which is a connection to a data store by
-// specified name.
-// If a DaxConn is found, this method returns it, but not found, creates a new
-// one with a local or global DaxSrc associated with same name.
-// If there are both local and global DaxSrc with same name, the local DaxSrc
-// is used.
-type Dax interface {
-	getDaxConn(name string) (DaxConn, Err)
+type daxSrcEntry struct {
+	name    string
+	ds      DaxSrc
+	local   bool
+	deleted bool
+	prev    *daxSrcEntry
+	next    *daxSrcEntry
+}
+
+type daxSrcEntryList struct {
+	head *daxSrcEntry
+	last *daxSrcEntry
 }
 
 var (
-	isGlobalDaxSrcsFixed bool              = false
-	globalDaxSrcMap      map[string]DaxSrc = make(map[string]DaxSrc)
-	globalDaxSrcMutex    sync.Mutex
+	isGlobalDaxSrcsFixed  bool = false
+	globalDaxSrcEntryList daxSrcEntryList
 )
 
-// AddGlobalDaxSrc registers a global DaxSrc with its name to make enable to
-// use DaxSrc in all transactions.
-// This method ignores to add a global DaxSrc when its name is already
-// registered.
-// In addition, this method ignores to add any more global DaxSrc(s) after
-// calling FixGlobalDaxSrcs function.
-func AddGlobalDaxSrc(name string, ds DaxSrc) {
-	globalDaxSrcMutex.Lock()
-	defer globalDaxSrcMutex.Unlock()
-
-	if !isGlobalDaxSrcsFixed {
-		_, exists := globalDaxSrcMap[name]
-		if !exists {
-			globalDaxSrcMap[name] = ds
-		}
+// Uses is the method that registers a global DaxSrc with its name to enable to
+// use DaxConn created by the argument DaxSrc in all transactions.
+//
+// If a DaxSrc is tried to register with a name already registered, it is
+// ignored and a DaxSrc registered with the same name first is used.
+// And this method ignore adding new DaxSrc(s) after Setup or first beginning
+// of Proc or Txn.
+func Uses(name string, ds DaxSrc) errs.Err {
+	if isGlobalDaxSrcsFixed {
+		return errs.Ok()
 	}
+
+	ent := &daxSrcEntry{name: name, ds: ds}
+
+	if globalDaxSrcEntryList.head == nil {
+		globalDaxSrcEntryList.head = ent
+		globalDaxSrcEntryList.last = ent
+	} else {
+		ent.prev = globalDaxSrcEntryList.last
+		globalDaxSrcEntryList.last.next = ent
+		globalDaxSrcEntryList.last = ent
+	}
+
+	return errs.Ok()
 }
 
-// StartUpGlobalDaxSrcs is a function to forbid adding more global dax sources
-// and to make available the registered global dax sources by calling Setup
-// method of each DaxSrc.
-// If even one DaxSrc fail to execute its SstUp method, this function
-// executes Free methods of all global DaxSrc(s) and returns sabi.Err.
-func StartUpGlobalDaxSrcs() Err {
+// Setup is the function that make the globally registered DaxSrc usable.
+//
+// This function forbids adding more global DaxSrc(s), and calls each Setup
+// method of all registered DaxSrc(s).
+// If one of DaxSrc(s) fails to execute synchronous Setup, this function stops
+// other setting up and returns an errs.Err containing the error reason of
+// that failure.
+//
+// If one of DaxSrc(s) fails to execute asynchronous Setup, this function
+// continue to other setting up and returns an errs.Err containing the error
+// reason of that failure and other errors if any.
+func Setup() errs.Err {
 	isGlobalDaxSrcsFixed = true
+	errs.FixCfg()
 
-	ch := make(chan namedErr)
+	var ag asyncGroupAsync[string]
 
-	for name, ds := range globalDaxSrcMap {
-		go func(name string, ds DaxSrc, ch chan namedErr) {
-			err := ds.SetUp()
-			ne := namedErr{name: name, err: err}
-			ch <- ne
-		}(name, ds, ch)
-	}
-
-	errs := make(map[string]Err)
-	n := len(globalDaxSrcMap)
-	for i := 0; i < n; i++ {
-		select {
-		case ne := <-ch:
-			if !ne.err.IsOk() {
-				errs[ne.name] = ne.err
-			}
+	for ent := globalDaxSrcEntryList.head; ent != nil; ent = ent.next {
+		ag.name = ent.name
+		err := ent.ds.Setup(&ag)
+		if err.IsNotOk() {
+			ag.wait()
+			Close()
+			ag.addErr(ag.name, err)
+			return errs.New(FailToSetupGlobalDaxSrcs{Errors: ag.makeErrs()})
 		}
 	}
 
-	if len(errs) > 0 {
-		ShutdownGlobalDaxSrcs()
-		return NewErr(FailToStartUpGlobalDaxSrcs{Errors: errs})
+	ag.wait()
+
+	if ag.hasErr() {
+		Close()
+		return errs.New(FailToSetupGlobalDaxSrcs{Errors: ag.makeErrs()})
 	}
 
-	return Ok()
+	return errs.Ok()
 }
 
-// ShutdownGlobalDaxSrcs is a function to terminate all global dax sources.
-func ShutdownGlobalDaxSrcs() {
-	var wg sync.WaitGroup
-	wg.Add(len(globalDaxSrcMap))
-
-	for _, ds := range globalDaxSrcMap {
-		go func(ds DaxSrc) {
-			defer wg.Done()
-			ds.End()
-		}(ds)
+// Close is the function that closes and frees each resource of registered
+// global DaxSrc(s).
+// This function should always be called before an application ends.
+func Close() {
+	for ent := globalDaxSrcEntryList.head; ent != nil; ent = ent.next {
+		ent.ds.Close()
 	}
-
-	wg.Wait()
 }
 
-// DaxBase is an interface which works as a front of an implementation as a
-// base of data connection sources, and defines methods: SetUpLocalDaxSrc and
-// FreeLocalDaxSrc.
+// StartApp is the function that calls Setup function, the argument function,
+// and Close function in order.
+// If Setup function or the argument function fails, this function stops
+// calling other functions and return an errs.Err containing the error
+// reaason..
 //
-// SetUpLocalDaxSrc method registered a DaxSrc with a name in this
-// implementation, but  ignores to add a local DaxSrc when its name is already
-// registered.
-// In addition, this method ignores to add local DaxSrc(s) while the
-// transaction is processing.
+// This function is a macro-like function aimed at reducing the amount of
+// coding.
+func StartApp(app func() errs.Err) errs.Err {
+	err := Setup()
+	if err.IsNotOk() {
+		return err
+	}
+	defer Close()
+
+	return app()
+}
+
+// Dax is the interface for a set of data access methods.
 //
-// This interface inherits Dax interface to get a DaxConn by a name.
-// Also, this has unexported methods for a transaction process.
+// This interface is embedded by Dax implementations for data
+// stores, and each Dax implementation defines data access methods to each
+// data store.
+// In data access methods, DacConn instances connected to data stores can be
+// got with GetConn function.
+//
+// At the same time, this interface is embedded by Dax interfaces for logics.
+// The each Dax interface declares only methods used by each logic.
+type Dax interface {
+	getDaxConn(name string) (DaxConn, errs.Err)
+}
+
+// DaxBase is the interface that declares the methods to manage DaxSrc(s).
+// And this interface declarees unexported methods to process a transaction.
+//
+// Close is the method to close and free all local DaxSrc(s).
+// Uses is the method to register and setup a local DaxSrc with an argument
+// name.
+// Uses_ is the method that creates a runner function which runs #Uses method.
+// Disuses is the method to close and remove a local DaxSrc specified by
+// an argument name.
+// Disuses_ is the method that creates a runner function which runs #Disuses
+// method.
 type DaxBase interface {
 	Dax
-	SetUpLocalDaxSrc(name string, ds DaxSrc) Err
-	FreeLocalDaxSrc(name string)
-	FreeAllLocalDaxSrcs()
+
+	Close()
+	Uses(name string, ds DaxSrc) errs.Err
+	Uses_(name string, ds DaxSrc) func() errs.Err
+	Disuses(name string)
+	Disuses_(name string) func() errs.Err
+
 	begin()
-	commit() Err
+	commit() errs.Err
 	rollback()
 	end()
 }
 
 type daxBaseImpl struct {
-	isLocalDaxSrcsFixed bool
-	localDaxSrcMap      map[string]DaxSrc
-	daxConnMap          map[string]DaxConn
-	daxConnMutex        sync.Mutex
+	DaxBase
+
+	isLocalDaxSrcsFixed  bool
+	localDaxSrcEntryList daxSrcEntryList
+
+	daxSrcEntryMap map[string]*daxSrcEntry
+	agSync         asyncGroupSync
+
+	daxConnMap   om.Map[string, DaxConn]
+	daxConnMutex sync.Mutex
 }
 
-// NewDaxBase is a function which creates a new DaxBase.
+// NewDaxBase is the function that creates a new DaxBase instance.
 func NewDaxBase() DaxBase {
-	return &daxBaseImpl{
-		isLocalDaxSrcsFixed: false,
-		localDaxSrcMap:      make(map[string]DaxSrc),
-		daxConnMap:          make(map[string]DaxConn),
+	isGlobalDaxSrcsFixed = true
+	errs.FixCfg()
+
+	base := &daxBaseImpl{
+		daxSrcEntryMap: make(map[string]*daxSrcEntry),
+		daxConnMap:     om.New[string, DaxConn](),
 	}
+
+	for ent := globalDaxSrcEntryList.last; ent != nil; ent = ent.prev {
+		base.daxSrcEntryMap[ent.name] = ent
+	}
+
+	return base
 }
 
-func (base *daxBaseImpl) SetUpLocalDaxSrc(name string, ds DaxSrc) Err {
-	base.daxConnMutex.Lock()
-	defer base.daxConnMutex.Unlock()
+func (base *daxBaseImpl) Close() {
+	if base.isLocalDaxSrcsFixed {
+		return
+	}
 
-	if !base.isLocalDaxSrcsFixed {
-		_, exists := base.localDaxSrcMap[name]
-		if !exists {
-			err := ds.SetUp()
-			if !err.IsOk() {
-				return err
-			}
-			base.localDaxSrcMap[name] = ds
+	for ent := base.localDaxSrcEntryList.head; ent != nil; ent = ent.next {
+		if !ent.deleted {
+			ent.deleted = true
+			ent.ds.Close()
 		}
 	}
 
-	return Ok()
+	base.localDaxSrcEntryList.head = nil
+	base.localDaxSrcEntryList.last = nil
 }
 
-func (base *daxBaseImpl) FreeLocalDaxSrc(name string) {
-	base.daxConnMutex.Lock()
-	defer base.daxConnMutex.Unlock()
+func (base *daxBaseImpl) Uses(name string, ds DaxSrc) errs.Err {
+	if base.isLocalDaxSrcsFixed {
+		return errs.Ok()
+	}
 
-	if !base.isLocalDaxSrcsFixed {
-		ds, exists := base.localDaxSrcMap[name]
-		if exists {
-			delete(base.localDaxSrcMap, name)
-			ds.End()
+	err := ds.Setup(&(base.agSync))
+	if err.IsNotOk() {
+		return errs.New(FailToSetupLocalDaxSrc{Name: name}, err)
+	}
+
+	if base.agSync.err.IsNotOk() {
+		return errs.New(FailToSetupLocalDaxSrc{Name: name}, base.agSync.err)
+	}
+
+	ent := &daxSrcEntry{name: name, ds: ds, local: true}
+
+	if base.localDaxSrcEntryList.head == nil {
+		base.localDaxSrcEntryList.head = ent
+		base.localDaxSrcEntryList.last = ent
+	} else {
+		ent.prev = base.localDaxSrcEntryList.last
+		base.localDaxSrcEntryList.last.next = ent
+		base.localDaxSrcEntryList.last = ent
+	}
+
+	base.daxSrcEntryMap[ent.name] = ent
+
+	return errs.Ok()
+}
+
+func (base *daxBaseImpl) Uses_(name string, ds DaxSrc) func() errs.Err {
+	return func() errs.Err {
+		return base.Uses(name, ds)
+	}
+}
+
+func (base *daxBaseImpl) Disuses(name string) {
+	if base.isLocalDaxSrcsFixed {
+		return
+	}
+
+	ent := base.daxSrcEntryMap[name]
+	if ent != nil && ent.local {
+		ent.deleted = true
+
+		if ent.prev != nil {
+			ent.prev.next = ent.next
+		} else {
+			base.localDaxSrcEntryList.head = ent.next
 		}
-	}
-}
 
-func (base *daxBaseImpl) FreeAllLocalDaxSrcs() {
-	base.daxConnMutex.Lock()
-	defer base.daxConnMutex.Unlock()
-
-	if !base.isLocalDaxSrcsFixed {
-		for _, ds := range base.localDaxSrcMap {
-			ds.End()
+		if ent.next != nil {
+			ent.next.prev = ent.prev
+		} else {
+			base.localDaxSrcEntryList.last = ent.prev
 		}
 
-		base.localDaxSrcMap = make(map[string]DaxSrc)
+		ent.ds.Close()
 	}
 }
 
-func (base *daxBaseImpl) getDaxConn(name string) (DaxConn, Err) {
-	conn := base.daxConnMap[name]
-	if conn != nil {
-		return conn, Ok()
+func (base *daxBaseImpl) Disuses_(name string) func() errs.Err {
+	return func() errs.Err {
+		base.Disuses(name)
+		return errs.Ok()
 	}
-
-	ds := base.localDaxSrcMap[name]
-	if ds == nil {
-		ds = globalDaxSrcMap[name]
-	}
-	if ds == nil {
-		return nil, NewErr(DaxSrcIsNotFound{Name: name})
-	}
-
-	base.daxConnMutex.Lock()
-	defer base.daxConnMutex.Unlock()
-
-	conn = base.daxConnMap[name]
-	if conn != nil {
-		return conn, Ok()
-	}
-
-	var err Err
-	conn, err = ds.CreateDaxConn()
-	if !err.IsOk() {
-		return nil, NewErr(FailToCreateDaxConn{Name: name}, err)
-	}
-
-	base.daxConnMap[name] = conn
-
-	return conn, Ok()
 }
 
 func (base *daxBaseImpl) begin() {
 	base.isLocalDaxSrcsFixed = true
-	isGlobalDaxSrcsFixed = true
 }
 
-type namedErr struct {
-	name string
-	err  Err
-}
+func (base *daxBaseImpl) commit() errs.Err {
+	var ag asyncGroupAsync[string]
 
-func (base *daxBaseImpl) commit() Err {
-	ch := make(chan namedErr)
-
-	for name, conn := range base.daxConnMap {
-		go func(name string, conn DaxConn, ch chan namedErr) {
-			err := conn.Commit()
-			ne := namedErr{name: name, err: err}
-			ch <- ne
-		}(name, conn, ch)
-	}
-
-	errs := make(map[string]Err)
-	n := len(base.daxConnMap)
-	for i := 0; i < n; i++ {
-		select {
-		case ne := <-ch:
-			if !ne.err.IsOk() {
-				errs[ne.name] = ne.err
-			}
+	for ent := base.daxConnMap.Front(); ent != nil; ent = ent.Next() {
+		ag.name = ent.Key()
+		err := ent.Value().Commit(&ag)
+		if err.IsNotOk() {
+			ag.wait()
+			ag.addErr(ent.Key(), err)
+			return errs.New(FailToCommitDaxConn{Errors: ag.makeErrs()})
 		}
 	}
 
-	if len(errs) > 0 {
-		return NewErr(FailToCommitDaxConn{Errors: errs})
+	ag.wait()
+
+	if ag.hasErr() {
+		return errs.New(FailToCommitDaxConn{Errors: ag.makeErrs()})
 	}
 
-	return Ok()
+	return errs.Ok()
 }
 
 func (base *daxBaseImpl) rollback() {
-	var wg sync.WaitGroup
-	wg.Add(len(base.daxConnMap))
+	var ag asyncGroupAsync[string]
 
-	for _, conn := range base.daxConnMap {
-		go func(conn DaxConn) {
-			defer wg.Done()
-			conn.Rollback()
-		}(conn)
+	for ent := base.daxConnMap.Front(); ent != nil; ent = ent.Next() {
+		conn := ent.Value()
+		if conn.IsCommitted() {
+			ent.Value().ForceBack(&ag)
+		} else {
+			ent.Value().Rollback(&ag)
+		}
 	}
 
-	wg.Wait()
+	ag.wait()
 }
 
 func (base *daxBaseImpl) end() {
-	var wg sync.WaitGroup
-	wg.Add(len(base.daxConnMap))
-
-	for _, conn := range base.daxConnMap {
-		go func(conn DaxConn) {
-			defer wg.Done()
-			conn.Close()
-		}(conn)
+	for {
+		ent := base.daxConnMap.FrontAndLdelete()
+		if ent == nil {
+			break
+		}
+		ent.Value().Close()
 	}
-
-	base.daxConnMap = make(map[string]DaxConn)
-
-	wg.Wait()
 
 	base.isLocalDaxSrcsFixed = false
 }
 
-// GetDaxConn is a function to cast type of DaxConn instance.
-// If it's failed to cast to a destination type, this function returns an Err
-// of a reason: FailToGetDaxConn.
-func GetDaxConn[C DaxConn](dax Dax, name string) (C, Err) {
+func (base *daxBaseImpl) getDaxConn(name string) (DaxConn, errs.Err) {
+	conn, loaded := base.daxConnMap.Load(name)
+	if loaded {
+		return conn, errs.Ok()
+	}
+
+	base.daxConnMutex.Lock()
+	defer base.daxConnMutex.Unlock()
+
+	conn, _, e := base.daxConnMap.LoadOrStoreFunc(name, func() (DaxConn, error) {
+		ent, exists := base.daxSrcEntryMap[name]
+		if !exists {
+			return nil, errs.New(DaxSrcIsNotFound{Name: name})
+		}
+
+		if ent.deleted && ent.local {
+			for gEnt := globalDaxSrcEntryList.head; gEnt != nil; gEnt = gEnt.next {
+				if gEnt.name == name {
+					base.daxSrcEntryMap[ent.name] = gEnt
+					ent = gEnt
+					break
+				}
+			}
+			if ent.deleted {
+				return nil, errs.New(DaxSrcIsNotFound{Name: name})
+			}
+		}
+
+		conn, err := ent.ds.CreateDaxConn()
+		if err.IsNotOk() {
+			return nil, errs.New(FailToCreateDaxConn{Name: name}, err)
+		}
+		if conn == nil {
+			return nil, errs.New(CreatedDaxConnIsNil{Name: name})
+		}
+		return conn, nil
+	})
+
+	if e != nil {
+		return nil, e.(errs.Err)
+	}
+	return conn, errs.Ok()
+}
+
+// GetDaxConn is the function to cast type of DaxConn instance.
+// If the cast failed, this function returns an errs.Err of the reason:
+// FailToCastDaxConn with the DaxConn name and type names of source and
+// destination.
+func GetDaxConn[C DaxConn](dax Dax, name string) (C, errs.Err) {
 	conn, err := dax.getDaxConn(name)
 	if err.IsOk() {
 		casted, ok := conn.(C)
@@ -360,25 +488,63 @@ func GetDaxConn[C DaxConn](dax Dax, name string) (C, Err) {
 			return casted, err
 		}
 
-		var from string
-		t := reflect.TypeOf(conn)
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-			from = "*" + t.Name() + " (" + t.PkgPath() + ")"
-		} else {
-			from = t.Name() + " (" + t.PkgPath() + ")"
-		}
-
-		var to string
-		t = reflect.TypeOf(casted)
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-			to = "*" + t.Name() + " (" + t.PkgPath() + ")"
-		} else {
-			to = t.Name() + " (" + t.PkgPath() + ")"
-		}
-		err = NewErr(FailToCastDaxConn{Name: name, FromType: from, ToType: to})
+		from := typeNameOf(conn)
+		to := typeNameOfTypeParam[C]()
+		err = errs.New(FailToCastDaxConn{Name: name, FromType: from, ToType: to})
 	}
 
 	return *new(C), err
+}
+
+// Txn is the function that executes logic functions in a transaction.
+//
+// First, this function casts the argument DaxBase to the type specified with
+// the function's type parameter.
+// Next, this function begins the transaction, and the argument logic functions
+// are executed..
+// Then, if no error occurs, this function commits all updates in the
+// transaction, otherwise rollbacks them.
+// If there are commit errors after some DaxConn(s) are commited, or there are
+// DaxConn(s) which don't have rollback mechanism, this function executes
+// ForceBack methods of those DaxConn(s).
+// And after that, this function ends the transaction.
+//
+// During a transaction, it is denied to add or remove any local DaxSrc(s).
+func Txn[D Dax](base DaxBase, logics ...func(dax D) errs.Err) errs.Err {
+	dax, ok := base.(D)
+	if !ok {
+		from := typeNameOf(&base)[1:]
+		to := typeNameOfTypeParam[D]()
+		return errs.New(FailToCastDaxBase{FromType: from, ToType: to})
+	}
+
+	base.begin()
+	defer base.end()
+
+	err := errs.Ok()
+
+	for _, logic := range logics {
+		err = logic(dax)
+		if err.IsNotOk() {
+			break
+		}
+	}
+
+	if err.IsOk() {
+		err = base.commit()
+	}
+
+	if err.IsNotOk() {
+		base.rollback()
+	}
+
+	return err
+}
+
+// Txn_ is the function that creates a runner function which runs a Txn
+// function.
+func Txn_[D Dax](base DaxBase, logics ...func(dax D) errs.Err) func() errs.Err {
+	return func() errs.Err {
+		return Txn[D](base, logics...)
+	}
 }

@@ -1,190 +1,264 @@
 package sabi_test
 
 import (
-	"fmt"
-	"reflect"
+	"os"
 
 	"github.com/sttk/sabi"
+	"github.com/sttk/sabi/errs"
 )
 
-func ExampleAddGlobalDaxSrc() {
-	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
+///
 
-	if sabi.StartUpGlobalDaxSrcs().IsNotOk() {
-		return
-	}
-	defer sabi.ShutdownGlobalDaxSrcs()
+type CliArgDaxSrc struct{}
 
-	base := sabi.NewDaxBase()
-
-	type MyDax struct {
-		sabi.Dax
-	}
-
-	dax := MyDax{Dax: base}
-
-	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
-	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
-
-	// Output:
-	// conn = sabi_test.MapDaxConn
-	// err.IsOk() = true
-
-	ClearDaxBase()
+func (ds CliArgDaxSrc) Setup(ag sabi.AsyncGroup) errs.Err {
+	return errs.Ok()
+}
+func (ds CliArgDaxSrc) Close() {}
+func (ds CliArgDaxSrc) CreateDaxConn() (sabi.DaxConn, errs.Err) {
+	return nil, errs.Ok()
 }
 
-func ExampleStartUpGlobalDaxSrcs() {
-	sabi.AddGlobalDaxSrc("hoge", NewMapDaxSrc())
-
-	if err := sabi.StartUpGlobalDaxSrcs(); err.IsNotOk() {
-		return
-	}
-	defer sabi.ShutdownGlobalDaxSrcs()
-
-	sabi.AddGlobalDaxSrc("fuga", NewMapDaxSrc())
-
-	base := sabi.NewDaxBase()
-
-	type MyDax struct {
-		sabi.Dax
-	}
-
-	dax := MyDax{Dax: base}
-
-	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
-	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
-
-	conn, err = sabi.GetDaxConn[MapDaxConn](dax, "fuga")
-	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %t\n", err.IsOk())
-	fmt.Printf("err.Error() = %s\n", err.Error())
-
-	// Output:
-	// conn = sabi_test.MapDaxConn
-	// err.IsOk() = true
-	// conn = sabi_test.MapDaxConn
-	// err.IsOk() = false
-	// err.Error() = {reason=DaxSrcIsNotFound, Name=fuga}
-
-	ClearDaxBase()
+func NewCliArgDaxSrc(osArgs []string) CliArgDaxSrc {
+	return CliArgDaxSrc{}
 }
 
-func ExampleDaxBase_SetUpLocalDaxSrc() {
-	base := sabi.NewDaxBase()
-	defer base.FreeAllLocalDaxSrcs()
+type DatabaseDaxSrc struct{}
 
-	base.SetUpLocalDaxSrc("hoge", NewMapDaxSrc())
-
-	type MyDax struct {
-		sabi.Dax
-	}
-
-	dax := MyDax{Dax: base}
-
-	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
-	fmt.Printf("conn = %v\n", reflect.TypeOf(conn))
-	fmt.Printf("err.IsOk() = %v\n", err.IsOk())
-
-	// Output:
-	// conn = sabi_test.MapDaxConn
-	// err.IsOk() = true
-
-	ClearDaxBase()
+func (ds DatabaseDaxSrc) Setup(ag sabi.AsyncGroup) errs.Err {
+	return errs.Ok()
+}
+func (ds DatabaseDaxSrc) Close() {}
+func (ds DatabaseDaxSrc) CreateDaxConn() (sabi.DaxConn, errs.Err) {
+	return nil, errs.Ok()
 }
 
-type GettingDax struct {
+func NewDatabaseDaxSrc(driverName, dataSourceName string) DatabaseDaxSrc {
+	return DatabaseDaxSrc{}
+}
+
+var (
+	driverName     string
+	dataSourceName string
+)
+
+type HttpRequestDaxSrc struct{}
+
+func (ds HttpRequestDaxSrc) Setup(ag sabi.AsyncGroup) errs.Err {
+	return errs.Ok()
+}
+func (ds HttpRequestDaxSrc) Close() {}
+func (ds HttpRequestDaxSrc) CreateDaxConn() (sabi.DaxConn, errs.Err) {
+	return nil, errs.Ok()
+}
+
+func NewHttpRequestDaxSrc(req any) HttpRequestDaxSrc {
+	return HttpRequestDaxSrc{}
+}
+
+var req any
+
+type HttpResponseDaxSrc struct{}
+
+func (ds HttpResponseDaxSrc) Setup(ag sabi.AsyncGroup) errs.Err {
+	return errs.Ok()
+}
+func (ds HttpResponseDaxSrc) Close() {}
+func (ds HttpResponseDaxSrc) CreateDaxConn() (sabi.DaxConn, errs.Err) {
+	return nil, errs.Ok()
+}
+
+func NewHttpResponseDaxSrc(resp any) HttpResponseDaxSrc {
+	return HttpResponseDaxSrc{}
+}
+
+var resp any
+
+type CliArgOptionDax struct {
 	sabi.Dax
 }
 
-func (dax GettingDax) GetData() (string, sabi.Err) {
-	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "hoge")
-	if !err.IsOk() {
-		return "", err
-	}
-	data := conn.dataMap["hogehoge"]
-	return data, err
-}
-
-type SettingDax struct {
+type DatabaseSetDax struct {
 	sabi.Dax
 }
 
-func (dax SettingDax) SetData(data string) sabi.Err {
-	conn, err := sabi.GetDaxConn[MapDaxConn](dax, "fuga")
-	if !err.IsOk() {
-		return err
-	}
-	conn.dataMap["fugafuga"] = data
-	return err
+type HttpReqParamDax struct {
+	sabi.Dax
 }
 
-func ExampleDax() {
-	// type GettingDax struct {
-	//   sabi.Dax
-	// }
-	// func (dax GettingDax) GetData() (string, sabi.Err) {
-	//   conn, err := dax.getDaxConn("hoge")
-	//   if !err.IsOk() {
-	//     return nil, err
-	//   }
-	//   return conn.(MapDaxConn).dataMap["hogehoge"], err
-	// }
-	//
-	// type SettingDax struct {
-	//   sabi.Dax
-	// }
-	// func (dax SettingDax) SetData(data string) sabi.Err {
-	//   conn, err := dax.getDaxConn("fuga")
-	//   if !err.IsOk() {
-	//     return nil, err
-	//   }
-	//   conn.(MapDaxConn).dataMap["fugafuga"] = data
-	//   return err
-	// }
+type HttpRespOutputDax struct {
+	sabi.Dax
+}
 
-	hogeDs := NewMapDaxSrc()
-	fugaDs := NewMapDaxSrc()
+///
 
-	base := sabi.NewDaxBase()
-	defer base.FreeAllLocalDaxSrcs()
+func ExampleClose() {
+	sabi.Uses("cliargs", NewCliArgDaxSrc(os.Args))
 
-	if err := base.SetUpLocalDaxSrc("hoge", hogeDs); err.IsNotOk() {
-		return
+	err := sabi.Setup()
+	if err.IsNotOk() {
+		// ...
 	}
-	if err := base.SetUpLocalDaxSrc("fuga", fugaDs); err.IsNotOk() {
-		return
-	}
+	defer sabi.Close()
 
-	base = struct {
-		sabi.DaxBase
-		GettingDax
-		SettingDax
-	}{
-		DaxBase:    base,
-		GettingDax: GettingDax{Dax: base},
-		SettingDax: SettingDax{Dax: base},
+	// ...
+}
+
+func ExampleSetup() {
+	sabi.Uses("cliargs", NewCliArgDaxSrc(os.Args))
+	sabi.Uses("database", NewDatabaseDaxSrc(driverName, dataSourceName))
+
+	err := sabi.Setup()
+	if err.IsNotOk() {
+		// ...
+	}
+	defer sabi.Close()
+
+	// ...
+}
+
+func ExampleStartApp() {
+	sabi.Uses("cliargs", NewCliArgDaxSrc(os.Args))
+	sabi.Uses("database", NewDatabaseDaxSrc(driverName, dataSourceName))
+
+	app := func() errs.Err {
+		// ...
+		return errs.Ok()
 	}
 
-	type DaxForLogic interface {
-		GetData() (string, sabi.Err)
-		SetData(data string) sabi.Err
+	err := sabi.StartApp(app)
+	if err.IsNotOk() {
+		// ...
 	}
+}
 
-	hogeDs.dataMap["hogehoge"] = "hello"
-	err := sabi.RunTxn(base, func(dax DaxForLogic) sabi.Err {
-		data, err := dax.GetData()
-		if !err.IsOk() {
-			return err
-		}
-		err = dax.SetData(data)
-		return err
+func ExampleUses() {
+	sabi.Uses("cliargs", NewCliArgDaxSrc(os.Args))
+	sabi.Uses("database", NewDatabaseDaxSrc(driverName, dataSourceName))
+
+	err := sabi.StartApp(func() errs.Err {
+		// ...
+		return errs.Ok()
 	})
-	fmt.Printf("%t\n", err.IsOk())
-	fmt.Printf("%s\n", fugaDs.dataMap["fugafuga"])
+	if err.IsNotOk() {
+		// ...
+	}
+	// ...
+}
 
+func ExampleDaxBase() {
+	sabi.Uses("cliargs", NewCliArgDaxSrc(os.Args))
+	sabi.Uses("database", NewDatabaseDaxSrc(driverName, dataSourceName))
+
+	err := sabi.Setup()
+	if err.IsNotOk() {
+		// ...
+	}
+	defer sabi.Close()
+
+	NewMyBase := func() sabi.DaxBase {
+		base := sabi.NewDaxBase()
+		return &struct {
+			sabi.DaxBase
+			CliArgOptionDax
+			DatabaseSetDax
+			HttpReqParamDax
+			HttpRespOutputDax
+		}{
+			DaxBase:           base,
+			CliArgOptionDax:   CliArgOptionDax{Dax: base},
+			DatabaseSetDax:    DatabaseSetDax{Dax: base},
+			HttpReqParamDax:   HttpReqParamDax{Dax: base},
+			HttpRespOutputDax: HttpRespOutputDax{Dax: base},
+		}
+	}
+
+	type GetSetDax struct {
+		sabi.Dax
+		// ...
+	}
+
+	GetSetLogic := func(dax GetSetDax) errs.Err {
+		// ...
+		return errs.Ok()
+	}
+
+	type OutputDax struct {
+		sabi.Dax
+		// ...
+	}
+
+	OutputLogic := func(dax OutputDax) errs.Err {
+		// ...
+		return errs.Ok()
+	}
+
+	base := NewMyBase()
+	defer base.Close()
+
+	err = base.Uses("httpReq", NewHttpRequestDaxSrc(req)).
+		IfOk(sabi.Txn_(base, GetSetLogic)).
+		IfOk(base.Disuses_("httpReq")).
+		IfOk(base.Uses_("httpResp", NewHttpResponseDaxSrc(resp))).
+		IfOk(sabi.Txn_(base, OutputLogic))
+	if err.IsNotOk() {
+		// ...
+	}
+}
+
+func ExampleNewDaxBase() {
+	base0 := sabi.NewDaxBase()
+
+	base := &struct {
+		sabi.DaxBase
+		CliArgOptionDax
+		DatabaseSetDax
+		HttpReqParamDax
+		HttpRespOutputDax
+	}{
+		DaxBase:           base0,
+		CliArgOptionDax:   CliArgOptionDax{Dax: base0},
+		DatabaseSetDax:    DatabaseSetDax{Dax: base0},
+		HttpReqParamDax:   HttpReqParamDax{Dax: base0},
+		HttpRespOutputDax: HttpRespOutputDax{Dax: base0},
+	}
 	// Output:
-	// true
-	// hello
+	_ = base
+}
+
+func NewMyBase() sabi.DaxBase {
+	base := sabi.NewDaxBase()
+	return &struct {
+		sabi.DaxBase
+		CliArgOptionDax
+		DatabaseSetDax
+		HttpReqParamDax
+		HttpRespOutputDax
+	}{
+		DaxBase:           base,
+		CliArgOptionDax:   CliArgOptionDax{Dax: base},
+		DatabaseSetDax:    DatabaseSetDax{Dax: base},
+		HttpReqParamDax:   HttpReqParamDax{Dax: base},
+		HttpRespOutputDax: HttpRespOutputDax{Dax: base},
+	}
+}
+
+func ExampleTxn() {
+	base := NewMyBase()
+	defer base.Close()
+
+	type GetSetDax struct {
+		sabi.Dax
+		// ...
+	}
+
+	GetSetLogic := func(dax GetSetDax) errs.Err {
+		// ...
+		return errs.Ok()
+	}
+
+	err := sabi.Txn(base, GetSetLogic)
+	if err.IsNotOk() {
+		// ...
+	}
 }
