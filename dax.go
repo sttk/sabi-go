@@ -510,7 +510,7 @@ func GetDaxConn[C DaxConn](dax Dax, name string) (C, errs.Err) {
 // And after that, this function ends the transaction.
 //
 // During a transaction, it is denied to add or remove any local DaxSrc(s).
-func Txn[D Dax](base DaxBase, logics ...func(dax D) errs.Err) errs.Err {
+func Txn[D any](base DaxBase, logics ...func(dax D) errs.Err) errs.Err {
 	dax, ok := base.(D)
 	if !ok {
 		from := typeNameOf(&base)[1:]
@@ -543,7 +543,7 @@ func Txn[D Dax](base DaxBase, logics ...func(dax D) errs.Err) errs.Err {
 
 // Txn_ is the function that creates a runner function which runs a Txn
 // function.
-func Txn_[D Dax](base DaxBase, logics ...func(dax D) errs.Err) func() errs.Err {
+func Txn_[D any](base DaxBase, logics ...func(dax D) errs.Err) func() errs.Err {
 	return func() errs.Err {
 		return Txn[D](base, logics...)
 	}

@@ -1331,8 +1331,8 @@ func TestTxn_oneLogic(t *testing.T) {
 		err := base.Uses("database", FooDaxSrc{})
 		assert.True(t, err.IsOk())
 
-		err = Txn(base, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[FooDaxConn](dax, "database")
+		err = Txn(base, func(dax any) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 			assert.True(t, err.IsOk())
 			return errs.Ok()
 		})
@@ -1366,12 +1366,12 @@ func TestTxn_twoLogic(t *testing.T) {
 		err = err.IfOk(base.Uses_("file", &BarDaxSrc{}))
 		assert.True(t, err.IsOk())
 
-		err = Txn(base, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[FooDaxConn](dax, "database")
+		err = Txn(base, func(dax any) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 			assert.True(t, err.IsOk())
 			return errs.Ok()
-		}, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+		}, func(dax any) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax.(Dax), "file")
 			assert.True(t, err.IsOk())
 			return errs.Ok()
 		})
@@ -1446,13 +1446,13 @@ func TestTxn_failToRunLogic(t *testing.T) {
 		err = err.IfOk(base.Uses_("file", &BarDaxSrc{}))
 		assert.True(t, err.IsOk())
 
-		err = Txn(base, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[FooDaxConn](dax, "database")
+		err = Txn(base, func(dax any) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 1")
 			return errs.New(FailToDoSomething{})
-		}, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+		}, func(dax any) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax.(Dax), "file")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 2")
 			return errs.Ok()
@@ -1502,13 +1502,13 @@ func TestTxn_failToCommit_sync(t *testing.T) {
 
 		WillFailToCommitFooDaxConn = true
 
-		err = Txn(base, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[FooDaxConn](dax, "database")
+		err = Txn(base, func(dax any) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 1")
 			return errs.Ok()
-		}, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+		}, func(dax any) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax.(Dax), "file")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 2")
 			return errs.Ok()
@@ -1561,13 +1561,13 @@ func TestTxn_failToCommit_async(t *testing.T) {
 
 		WillFailToCommitBarDaxConn = true
 
-		err = Txn(base, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[FooDaxConn](dax, "database")
+		err = Txn(base, func(dax any) errs.Err {
+			_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 1")
 			return errs.Ok()
-		}, func(dax Dax) errs.Err {
-			_, err := GetDaxConn[*BarDaxConn](dax, "file")
+		}, func(dax any) errs.Err {
+			_, err := GetDaxConn[*BarDaxConn](dax.(Dax), "file")
 			assert.True(t, err.IsOk())
 			Logs.PushBack("run logic 2")
 			return errs.Ok()
@@ -1617,12 +1617,12 @@ func TestTxn_runner(t *testing.T) {
 
 		err := base.Uses("database", FooDaxSrc{}).
 			IfOk(base.Uses_("file", &BarDaxSrc{})).
-			IfOk(Txn_(base, func(dax Dax) errs.Err {
-				_, err := GetDaxConn[FooDaxConn](dax, "database")
+			IfOk(Txn_(base, func(dax any) errs.Err {
+				_, err := GetDaxConn[FooDaxConn](dax.(Dax), "database")
 				assert.True(t, err.IsOk())
 				return errs.Ok()
-			}, func(dax Dax) errs.Err {
-				_, err := GetDaxConn[*BarDaxConn](dax, "file")
+			}, func(dax any) errs.Err {
+				_, err := GetDaxConn[*BarDaxConn](dax.(Dax), "file")
 				assert.True(t, err.IsOk())
 				return errs.Ok()
 			}))

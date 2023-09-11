@@ -174,7 +174,6 @@ func ExampleDaxBase() {
 	}
 
 	type GetSetDax struct {
-		sabi.Dax
 		// ...
 	}
 
@@ -184,7 +183,6 @@ func ExampleDaxBase() {
 	}
 
 	type OutputDax struct {
-		sabi.Dax
 		// ...
 	}
 
@@ -248,7 +246,6 @@ func ExampleTxn() {
 	defer base.Close()
 
 	type GetSetDax struct {
-		sabi.Dax
 		// ...
 	}
 
