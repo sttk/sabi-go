@@ -49,6 +49,17 @@ unit of the data source.
 By doing so, the definition of a new DaxBase also serves as a list of the data
 sources being used.
 
+## Import declaration
+
+To use this package in your code, the following import declaration is necessary.
+
+```
+import (
+    "github.com/sttk/sabi"
+    "github.com/sttk/sabi/errs"
+)
+```
+
 ## Usage
 
 ### Logic and an interface for its data access
