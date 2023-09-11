@@ -26,16 +26,16 @@ DaxBase serves as an intermediary that connects both of them.
 
 ### Separation of data accesses for each logic
 
-A logic is a function that takes Dax interface as its only one argument.
-The type of this Dax is a type parameter of the logic function, and also a type
+A logic is a function that takes dax interface as its only one argument.
+The type of this dax is a type parameter of the logic function, and also a type
 parameter of the transaction function, Txn, that executes logics.
 
-Therefore, since the type of Dax can be changed for each logic or transaction,
+Therefore, since the type of dax can be changed for each logic or transaction,
 it is possible to limit data accesses used by the logic, by declaring only
 necessary data access methods from among ones defined in DaxBase instance..
 
 At the same time, since all data accesses of a logic is done through this sole
-Dax interface, this Dax interface serves as a list of data access methods used
+dax interface, this dax interface serves as a list of data access methods used
 by a logic.
 
 ### Separation of data accesses by data sources and reintegration of them
@@ -72,7 +72,6 @@ type ( // possible error reasons
 )
 
 type GreetDax interface {
-    sabi.Dax
     UserName() (string, errs.Err)
     Hour() int
     Output(text string) errs.Err
