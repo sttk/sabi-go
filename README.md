@@ -4,35 +4,43 @@ A small framework to separate logics and data accesses for Golang application.
 
 ## Concepts
 
-The concept of this framework is separation and reintegration of necessary and
-redundant parts based on the perspectives of the whole and the
+The overall concept of this framework is separation and reintegration of
+necessary and redundant parts based on the perspectives of the whole and the
 parts.
 The separation of logics and data accesses is the most prominent and
 fundamental part of this concept.
 
 ### Separation of logics and data accesses
 
-In general, a program consists of procedures and data. And procedures include data accesses for operating data, and the rest of procedures are logics. So we can say that a program consists of logics, data accesses and data.
+In general, a program consists of procedures and data. And procedures include
+data accesses for operating data, and the rest of procedures are logics.
+So we can say that a program consists of logics, data accesses and data.
 
-We often think to separate an application to multiple layers, for example, controller layer, business logic layer, and data access layer.
-The logics and data accesses mentioned in this framework may appear to follow such layering.
-However, the controller layer also has data accesses such as transforming user requests and responses for the business logic layer.
-Generally, such layers of an application is established as vertical stages of data processing within a data flow.
+We often think to separate an application to multiple layers, for example,
+controller layer, business logic layer, and data access layer.
+The logics and data accesses mentioned in this framework may appear to follow
+such layering.
+However, the controller layer also has data accesses such as transforming user
+requests and responses for the business logic layer.
+Generally, such layers of an application is established as vertically
+positioned stages of data processing within a data flow.
 
 In this framework, the relationship between logics and data accesses is not
 defined by layers but by lanes.
-Their relationship is vertical in terms of invocation, but is horizontal conceptually.
-DaxBase serves as an intermediary that connects both of them.
+Although their relationship is vertical in terms of invocation, it is
+conceptually horizontal.
+`DaxBase` serves as an intermediary that connects both of them.
 
 ### Separation of data accesses for each logic
 
-A logic is a function that takes dax interface as its only one argument.
-The type of this dax is a type parameter of the logic function, and also a type
-parameter of the transaction function, Txn, that executes logics.
+A logic is a function that takes a dax interface as its only one argument.
+The type of this dax is declared by the type parameter of the logic function,
+and also the type parameter of the transaction function, `Txn`, that executes
+logics.
 
 Therefore, since the type of dax can be changed for each logic or transaction,
 it is possible to limit data accesses used by the logic, by declaring only
-necessary data access methods from among ones defined in DaxBase instance..
+necessary data access methods from among ones defined in `DaxBase` instance.
 
 At the same time, since all data accesses of a logic is done through this sole
 dax interface, this dax interface serves as a list of data access methods used
@@ -40,14 +48,15 @@ by a logic.
 
 ### Separation of data accesses by data sources and reintegration of them
 
-Data access methods are implemented as methods of some Dax structs that
-embedding a DaxBase.
-Furthermore these Dax structs can be integrated into a single new DaxBase.
+Data access methods are implemented as methods of some `Dax` structs that
+embedding a `DaxBase`.
+Furthermore these `Dax` structs are integrated into a single new `DaxBase`.
 
-A Dax struct can be created in any unit, but it is clearer to create it in the
-unit of the data source.
-By doing so, the definition of a new DaxBase also serves as a list of the data
-sources being used.
+A `Dax` struct can be created at any unit, but it is clearer to create it at
+the unit of the data source.
+By doing so, the definition of a new `DaxBase` also serves as a list of the
+data sources being used.
+
 
 ## Import declaration
 
@@ -505,23 +514,23 @@ This framework supports Go 1.18 or later.
 % gvm-fav
 Now using version go1.18.10
 go version go1.18.10 darwin/amd64
-ok  	github.com/sttk/sabi	0.614s	coverage: 100.0% of statements
-ok  	github.com/sttk/sabi/errs	0.793s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi	0.604s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi/errs	0.773s	coverage: 100.0% of statements
 
 Now using version go1.19.13
 go version go1.19.13 darwin/amd64
-ok  	github.com/sttk/sabi	0.559s	coverage: 100.0% of statements
-ok  	github.com/sttk/sabi/errs	0.755s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi	0.562s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi/errs	0.735s	coverage: 100.0% of statements
 
 Now using version go1.20.8
 go version go1.20.8 darwin/amd64
-ok  	github.com/sttk/sabi	0.566s	coverage: 100.0% of statements
-ok  	github.com/sttk/sabi/errs	0.833s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi	0.680s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi/errs	0.732s	coverage: 100.0% of statements
 
 Now using version go1.21.1
 go version go1.21.1 darwin/amd64
 ok  	github.com/sttk/sabi	0.572s	coverage: 100.0% of statements
-ok  	github.com/sttk/sabi/errs	0.835s	coverage: 100.0% of statements
+ok  	github.com/sttk/sabi/errs	0.836s	coverage: 100.0% of statements
 
 Back to go1.21.1
 Now using version go1.21.1
