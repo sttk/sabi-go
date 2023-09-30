@@ -63,14 +63,14 @@ type /* error reasons */ (
 
 	// FailToCastDaxConn is the error reason which indicates that a DaxConn
 	// instance of the specified name failed to cast to the destination type.
-	// The field Name and FromType is the name and type name of the DaxConn
+	// The fields Name and FromType are the name and type name of the DaxConn
 	// instance, and the field ToType is the type name of the destination type.
 	FailToCastDaxConn struct {
 		Name, FromType, ToType string
 	}
 
-	// FailToCastDaxBase is the error reason which indicates that a DaxBase instance
-	// failed to cast to the destination type.
+	// FailToCastDaxBase is the error reason which indicates that a DaxBase
+	// instance failed to cast to the destination type.
 	// The field FromType is the type name of the DaxBase instance and the field
 	// ToType is the type name of the destination type.
 	FailToCastDaxBase struct {
@@ -86,7 +86,7 @@ type /* error reasons */ (
 // IsCommitted is the method for check whether updates are already committed.
 // Rollback is the method for rollback updates in a transaction.
 // ForceBack is the method to revert updates forcely even if updates are
-// already commited or this connection ooes not have rollback mechanism.
+// already commited or this connection does not have rollback mechanism.
 // If commting and rollbacking procedures are asynchronous, the argument
 // AsyncGroup(s) are used to process them.
 // Close is the method to close this connecton.
@@ -139,8 +139,7 @@ var (
 //
 // If a DaxSrc is tried to register with a name already registered, it is
 // ignored and a DaxSrc registered with the same name first is used.
-// And this method ignore adding new DaxSrc(s) after Setup or first beginning
-// of Proc or Txn.
+// And this method ignore adding new DaxSrc(s) after Setup or beginning of Txn.
 func Uses(name string, ds DaxSrc) errs.Err {
 	if isGlobalDaxSrcsFixed {
 		return errs.Ok()
@@ -160,10 +159,10 @@ func Uses(name string, ds DaxSrc) errs.Err {
 	return errs.Ok()
 }
 
-// Setup is the function that make the globally registered DaxSrc usable.
-//
+// Setup is the function that make all globally registered DaxSrc(s) usable.
 // This function forbids adding more global DaxSrc(s), and calls each Setup
 // method of all registered DaxSrc(s).
+//
 // If one of DaxSrc(s) fails to execute synchronous Setup, this function stops
 // other setting up and returns an errs.Err containing the error reason of
 // that failure.
@@ -211,7 +210,7 @@ func Close() {
 // and Close function in order.
 // If Setup function or the argument function fails, this function stops
 // calling other functions and return an errs.Err containing the error
-// reaason..
+// reaason.
 //
 // This function is a macro-like function aimed at reducing the amount of
 // coding.
@@ -231,10 +230,7 @@ func StartApp(app func() errs.Err) errs.Err {
 // stores, and each Dax implementation defines data access methods to each
 // data store.
 // In data access methods, DacConn instances connected to data stores can be
-// got with GetConn function.
-//
-// At the same time, this interface is embedded by Dax interfaces for logics.
-// The each Dax interface declares only methods used by each logic.
+// obtained with GetDaxConn function.
 type Dax interface {
 	getDaxConn(name string) (DaxConn, errs.Err)
 }
@@ -411,9 +407,9 @@ func (base *daxBaseImpl) rollback() {
 	for ent := base.daxConnMap.Front(); ent != nil; ent = ent.Next() {
 		conn := ent.Value()
 		if conn.IsCommitted() {
-			ent.Value().ForceBack(&ag)
+			conn.ForceBack(&ag)
 		} else {
-			ent.Value().Rollback(&ag)
+			conn.Rollback(&ag)
 		}
 	}
 
@@ -500,8 +496,8 @@ func GetDaxConn[C DaxConn](dax Dax, name string) (C, errs.Err) {
 //
 // First, this function casts the argument DaxBase to the type specified with
 // the function's type parameter.
-// Next, this function begins the transaction, and the argument logic functions
-// are executed..
+// Next, this function begins the transaction, and executes the argument logic
+// functions.
 // Then, if no error occurs, this function commits all updates in the
 // transaction, otherwise rollbacks them.
 // If there are commit errors after some DaxConn(s) are commited, or there are
