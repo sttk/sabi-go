@@ -68,61 +68,61 @@ A logic is implemented as a function.
 This function takes only an argument, dax, which is an interface that gathers
 only the data access methods needed by this logic function.
 
-Since dax conceals details of data access procedures, this function only
-includes logical procedures.
+Since a dax for a logic conceals details of data access procedures, this
+function only includes logical procedures.
 In this logical part, there is no concern about where the data is input from or where it is output to.
 
-For example, in the following code, GreetLogic is a logic function and GreetDax
-is a dax interface for GreetLogic.
+For example, in the following code, `GreetLogic` is a logic function and
+`GreetDax` is a dax interface for `GreetLogic`.
 
 ```
 type ( // possible error reasons
-    NoName struct {}
-    FailToGetHour struct {}
-    FailToOutput struct { Text string }
+    NoName        struct{}
+    FailToGetHour struct{}
+    FailToOutput  struct{ Text string }
 )
 
 type GreetDax interface {
     UserName() (string, errs.Err)
-    Hour() int
+    Hour() (int, errs.Err)
     Output(text string) errs.Err
 }
 
 func GreetLogic(dax GreetDax) errs.Err {
     hour, err := dax.Hour()
     if err.IsNotOk() {
-      return err
+        return err
     }
 
     var s string
     switch {
     case 5 <= hour && hour < 12:
-      s = "Good morning, "
+        s = "Good morning, "
     case 12 <= hour && hour < 16:
-      s = "Good afternoon, "
+        s = "Good afternoon, "
     case 16 <= hour && hour < 21:
-      s = "Good evening, "
+        s = "Good evening, "
     default:
-      s = "Hi, "
+        s = "Hi, "
     }
 
     err = dax.Output(s)
     if err.IsNotOk() {
-      return err
+        return err
     }
 
     name, err := dax.UserName()
     if err.IsNotOk() {
-      return err
+        return err
     }
 
-    return dax.Output(name)
+    return dax.Output(name + ".\n")
 }
 ```
 
-In GreetLogic, there are no codes for inputting the hour, inputting a user name,
-and outputing a greeting.
-This function has only concern to create a greeting text.
+In `GreetLogic`, there are no codes for inputting the hour, inputting a user
+name, and outputing a greeting.
+This logic function has only concern to create a greeting text.
 
 ### Data accesses for unit testing
 
@@ -153,21 +153,26 @@ func (dax MapGreetDax) Hour() (int, errs.Err) {
 }
 
 func (dax MapGreetDax) Output(text string) errs.Err {
-    if m["greeting"] == "error" { // for testing the error case.
-      return errs.New(FailToOutput{Text: text})
+    var s string
+    v, exists := dax.m["greeting"]
+    if exists {
+        s = v.(string)
     }
-    dax.m["greeting"] = text
+    if s == "error" { // for testings the error case
+        return errs.New(FailToOutput{Text: text})
+    }
+    dax.m["greeting"] = s + text
     return errs.Ok()
 }
 
 func NewMapGreetDaxBase(m map[string]any) sabi.DaxBase {
     base := sabi.NewDaxBase()
     return struct {
-      sabi.DaxBase
-      MapGreetDax
-    } {
-      DaxBase: base,
-      MapGreetDax: MapGreetDax{m: m},
+        sabi.DaxBase
+        MapGreetDax
+    }{
+        DaxBase:     base,
+        MapGreetDax: MapGreetDax{m: m},
     }
 }
 ```
@@ -177,16 +182,18 @@ And the following code is an example of a test case.
 ```
 func TestGreetLogic_morning(t *testing.T) {
     m := make(map[string]any)
-    base := NewGreetDaxBase(m)
+    base := NewMapGreetDaxBase(m)
 
     m["username"] = "everyone"
     m["hour"] = 10
-    err := sabi.Txn[GreetDax](base, GreetLogic)
+
+    err := sabi.Txn(base, GreetLogic)
     if err.IsNotOk() {
-      t.Errorf(err.Error())
+        t.Errorf(err.Error())
     }
-    if m["greeting"] == "Good morning, everyone" {
-      t.Errorf("Bad greeting: %v\n", m["greeting"])
+
+    if m["greeting"] != "Good morning, everyone.\n" {
+        t.Errorf("Bad greeting: %v\n", m["greeting"])
     }
 }
 ```
@@ -211,16 +218,20 @@ type CliArgsDax struct {
 
 func (dax CliArgsDax) UserName() (string, errs.Err) {
     if len(os.Args) <= 1 {
-      return "", errs.New(NoName{})
+        return "", errs.New(NoName{})
     }
     return os.Args[1], errs.Ok()
 }
 
-func (dax CliArgsDax) Hour() (string, errs.Err) {
+func (dax CliArgsDax) Hour() (int, errs.Err) {
     if len(os.Args) <= 2 {
-      return 0, errs.New(FailToGetHour{})
+        return 0, errs.New(FailToGetHour{})
     }
-    return os.Args[2], errs.Ok()
+    n, err := strconv.Atoi(os.Args[2])
+    if err != nil {
+        return 0, errs.New(FailToGetHour{}, err)
+    }
+    return n, errs.Ok()
 }
 ```
 
@@ -233,13 +244,13 @@ type ConsoleDax struct {
 }
 
 func (dax ConsoleDax) Output(text string) errs.Err {
-    fmt.Println(text)
+    fmt.Print(text)
     return errs.Ok()
 }
 ```
 
 And the following code is an example of a constructor function of a struct
-based on DaxBase into which the above two dax are integrated.
+based on `DaxBase` into which the above two dax are integrated.
 This implementation also serves as a list of the external data sources being
 used.
 
@@ -250,8 +261,8 @@ func NewGreetDaxBase() sabi.DaxBase {
         sabi.DaxBase
         CliArgsDax
         ConsoleDax
-    } {
-        DaxBase: base,
+    }{
+        DaxBase:    base,
         CliArgsDax: CliArgsDax{Dax: base},
         ConsoleDax: ConsoleDax{Dax: base},
     }
@@ -263,18 +274,18 @@ func NewGreetDaxBase() sabi.DaxBase {
 The following code executes the above GreetLogic in a transaction process.
 
 ```
+func app() errs.Err {
+    base := NewGreetDaxBase()
+    defer base.Close()
+
+    return sabi.Txn(base, GreetLogic)
+}
+
 func main() {
     if err := sabi.StartApp(app); err.IsNotOk() {
         fmt.Println(err.Error())
         os.Exit(1)
     }
-}
-
-func app() errs.Err {
-    base := NewBase()
-    defer base.Close()
-
-    return sabi.Txn(base, GreetLogic))
 }
 ```
 
@@ -284,28 +295,26 @@ In the above codes, the hour is obtained from command line arguments.
 Here, assume that the specification has been changed to retrieve it
 from system clock instread.
 
-In this case, we can solve this by removing the Hour method from CliArgsDax
-and creating a new Dax, SystemClockDax, which has Hour method to retrieve
+In this case, we can solve this by removing the `Hour` method from `CliArgsDax`
+and creating a new dax, `SystemClockDax`, which has `Hour` method to retrieve
 a hour from system clock.
 
 ```
-// func (dax CliArgsDax) Hour() (string, errs.Err) {  // Removed
-//     if len(os.Args) <= 2 {
-//       return 0, errs.New(FailToGetHour{})
-//     }
-//     return os.Args[2], errs.Ok()
+// func (dax CliArgsDax) Hour() (int, errs.Err) {  // Removed
+//     ...
 // }
-
-type SystemClockDax struct {  // Added
+```
+```
+type SystemClockDax struct {
     sabi.Dax
 }
 
-func (dax SystemClockTimeDax) Hour() (string, errs.Err) {  // Added
+func (dax SystemClockDax) Hour() (int, errs.Err) {
     return time.Now().Hour(), errs.Ok()
 }
 ```
 
-And the DaxBase struct, into which multiple dax structs have been integrated,
+And the `DaxBase` struct, into which multiple dax structs have been integrated,
 is modified as follows.
 
 ```
@@ -325,7 +334,7 @@ func NewGreetDaxBase() sabi.DaxBase {
 }
 ```
 
-### Moving outputs to next transaction process.
+### Moving outputs to next transaction process
 
 The above codes works normally if no error occurs.
 But if an error occurs at getting user name, a incomplete string is being
@@ -333,72 +342,152 @@ output to console.
 Such behavior is not appropriate for transaction processing.
 
 So we should change the above codes to store in memory temporarily in the
-existing transaction process, and output to console in the next transaction.
+existing transaction process, and then output to console in the next
+transaction.
 
-The following code is the implementation of MemoryDax which is memory store
-dax and the DaxBase struct after replacing ConsoleDax to MemoryDax.
+Here, we try to create a `DaxSrc` and `DaxConn` for memory store, too.
+Though a dax for memroy store will be a struct and it can have its own state,
+
+The following codes are the implementations of `MemoryDaxSrc`, `MemoryDaxConn`,
+and `MemoryDax`.
 
 ```
-type MemoryDax struct {  // Added
+type MemoryDaxSrc struct {
+    buf strings.Builder
+}
+
+func (ds *MemoryDaxSrc) Setup(ag sabi.AsyncGroup) errs.Err {
+    return errs.Ok()
+}
+
+func (ds *MemoryDaxSrc) Close() {
+    ds.buf.Reset()
+}
+
+func (ds *MemoryDaxSrc) CreateDaxConn() (sabi.DaxConn, errs.Err) {
+    return MemoryDaxConn{buf: &(ds.buf)}, errs.Ok()
+}
+```
+```
+type MemoryDaxConn struct {
+    buf *strings.Builder
+}
+
+func (conn MemoryDaxConn) Append(text string) {
+    conn.buf.WriteString(text)
+}
+
+func (conn MemoryDaxConn) Get() string {
+    return conn.buf.String()
+}
+
+func (conn MemoryDaxConn) Commit(ag sabi.AsyncGroup) errs.Err {
+    return errs.Ok()
+}
+
+func (conn MemoryDaxConn) IsCommitted() bool {
+    return true
+}
+
+func (conn MemoryDaxConn) Rollback(ag sabi.AsyncGroup) {
+}
+
+func (conn MemoryDaxConn) ForceBack(ag sabi.AsyncGroup) {
+}
+
+func (conn MemoryDaxConn) Close() {
+}
+```
+```
+type MemoryDax struct {
     sabi.Dax
-    text string
 }
 
-func (dax *MemoryDax) Output(text string) errs.Err {  // Added
-    dax.text = text
-    return errs.Ok()
+func (dax MemoryDax) Output(text string) errs.Err {
+    conn, err := sabi.GetDaxConn[MemoryDaxConn](dax, "memory")
+    if err.IsNotOk() {
+        return err
+    }
+    conn.Append(text)
+    return err
 }
 
-func (dax *MemoryDax) GetText() string {  // Added
-    return dax.text
+func (dax MemoryDax) GetText() (string, errs.Err) {
+    conn, err := sabi.GetDaxConn[MemoryDaxConn](dax, "memory")
+    if err.IsNotOk() {
+        return "", err
+    }
+    return conn.Get(), err
 }
-
-func (dax ConsoleDax) Print(text string) errs.Err {  // Changed from Output
-    fmt.Println(text)
-    return errs.Ok()
-}
-
+```
+```
 func NewGreetDaxBase() sabi.DaxBase {
     base := sabi.NewDaxBase()
     return struct {
         sabi.DaxBase
         CliArgsDax
         SystemClockDax
-        ConsoleDax
         MemoryDax  // Added
-    } {
-        DaxBase: base,
-        CliArgsDax: CliArgsDax{Dax: base},
+        ConsoleDax
+    }{
+        DaxBase:        base,
+        CliArgsDax:     CliArgsDax{Dax: base},
         SystemClockDax: SystemClockDax{Dax: base},
-        ConsoleDax: ConsoleDax{Dax: base},
-        MemoryDax: MemoryDax{Dax: base},  // Added
+        MemoryDax:      MemoryDax{Dax: base},  // Added
+        ConsoleDax:     ConsoleDax{Dax: base},
     }
 }
 ```
+```
+func app() errs.Err {
+    base := NewGreetDaxBase()
+    defer base.Close()
 
-The following code is the logic to output text to console in next transaction
-process, the dax interface for the logic, and the execution of logics after
-being changed.
+    return base.Uses("memory", MemoryDaxSrc{}).  // Added
+        IfOk(sabi.Txn_(base, GreenLogic))        // Changed
+}
+```
+
+And we need to change the name of the method `ConsoleDax#Output` to avoid name
+collision with the method `MemoryDax#Output`.
 
 ```
-type PrintDax interface {  // Added
-    GetText() string
+func (dax ConsoleDax) Print(text string) errs.Err {  // Changed from Output
+    fmt.Print(text)
+    return errs.Ok()
+}
+```
+
+Moreover, the following code is the logic to output text to console in next
+transaction process, the dax interface for the logic, and the execution of
+logics after being changed.
+
+```
+type PrintDax interface {
+    GetText() (string, errs.Err)
     Print(text string) errs.Err
 }
 
-func PrintLogic(dax PrintDax) errs.Err {  // Added
-    text := dax.GetText()
+func PrintLogic(dax PrintDax) errs.Err {
+    text, err := dax.GetText()
+    if err.IsNotOk() {
+        return err
+    }
     return dax.Print(text)
 }
-
+```
+```
 func app() errs.Err {
-    base := NewBase()
+    base := NewGreetDaxBase()
     defer base.Close()
 
-    return sabi.Txn(base, GreetLogic)).    // Changed
-        IfOk(sabi.Txn_(base, PrintLogic))  // Added
+    return base.Uses("memory", MemoryDaxSrc{}).  // Added
+        IfOk(sabi.Txn_(base, GreenLogic)).  // Changed
+        IfOk(sabi.Txn_(base, PrintLogic))   // Added
 }
 ```
+
+That completes it.
 
 The important point is that the GreetLogic function is not changed.
 Since these changes are not related to the existing application logic, it is
