@@ -137,7 +137,7 @@ This logic function has only concern to create a greeting text.
 
 To test a logic function, the simplest dax struct is what using a map.
 The following code is an example of a dax struct using a map and having
-three methods that are same to GreetDax interface methods above.
+three methods that are same to `GreetDax` interface methods above.
 
 ```
 type MapGreetDax struct {
@@ -213,9 +213,9 @@ In actual use, multiple data sources are often used.
 In this example, an user name and the hour are input as command line argument,
 and greeting is output to console.
 Therefore, two dax struct are created and they are integrated into a new struct
-based on DaxBase.
+based on `DaxBase`.
 Since Golang is structural typing language, this new DaxBase can be casted to
-GreetDax.
+`GreetDax`.
 
 The following code is an example of a dax struct which inputs an user name and
 the hour from command line argument.
@@ -280,7 +280,7 @@ func NewGreetDaxBase() sabi.DaxBase {
 
 ### Executing a logic
 
-The following code executes the above GreetLogic in a transaction process.
+The following code executes the above `GreetLogic` in a transaction process.
 
 ```
 func app() errs.Err {
@@ -354,8 +354,30 @@ So we should change the above codes to store in memory temporarily in the
 existing transaction process, and then output to console in the next
 transaction.
 
+The following code is the logic to output text to console in next transaction
+process and the dax interface for this logic.
+
+```
+type PrintDax interface {
+    GetText() (string, errs.Err)
+    Print(text string) errs.Err
+}
+
+func PrintLogic(dax PrintDax) errs.Err {
+    text, err := dax.GetText()
+    if err.IsNotOk() {
+        return err
+    }
+    return dax.Print(text)
+}
+```
+
 Here, we try to create a `DaxSrc` and `DaxConn` for memory store, too.
 Though a dax for memroy store will be a struct and it can have its own state,
+it is better that the `DaxSrc` holds the memory store as its state because of
+the manner of this framework that a `Dax` struct for each data store, not yet
+reintegrated in a `DaxBase`, should not hold state, and enabling transaction
+control such as cleaning the memory store when an error occurs.
 
 The following codes are the implementations of `MemoryDaxSrc`, `MemoryDaxConn`,
 and `MemoryDax`.
@@ -402,6 +424,7 @@ func (conn MemoryDaxConn) Rollback(ag sabi.AsyncGroup) {
 }
 
 func (conn MemoryDaxConn) ForceBack(ag sabi.AsyncGroup) {
+    conn.buf.setLength(0);
 }
 
 func (conn MemoryDaxConn) Close() {
@@ -453,7 +476,8 @@ func app() errs.Err {
     defer base.Close()
 
     return base.Uses("memory", MemoryDaxSrc{}).  // Added
-        IfOk(sabi.Txn_(base, GreenLogic))        // Changed
+        IfOk(sabi.Txn_(base, GreenLogic)).  // Changed
+        IfOk(sabi.Txn_(base, PrintLogic))   // Added
 }
 ```
 
@@ -467,38 +491,9 @@ func (dax ConsoleDax) Print(text string) errs.Err {  // Changed from Output
 }
 ```
 
-Moreover, the following code is the logic to output text to console in next
-transaction process, the dax interface for the logic, and the execution of
-logics after being changed.
-
-```
-type PrintDax interface {
-    GetText() (string, errs.Err)
-    Print(text string) errs.Err
-}
-
-func PrintLogic(dax PrintDax) errs.Err {
-    text, err := dax.GetText()
-    if err.IsNotOk() {
-        return err
-    }
-    return dax.Print(text)
-}
-```
-```
-func app() errs.Err {
-    base := NewGreetDaxBase()
-    defer base.Close()
-
-    return base.Uses("memory", MemoryDaxSrc{}).  // Added
-        IfOk(sabi.Txn_(base, GreenLogic)).  // Changed
-        IfOk(sabi.Txn_(base, PrintLogic))   // Added
-}
-```
-
 That completes it.
 
-The important point is that the GreetLogic function is not changed.
+The important point is that the `GreetLogic` function is not changed.
 Since these changes are not related to the existing application logic, it is
 limited to the data access part (and the part around the newly added logic)
 only.
