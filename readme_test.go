@@ -247,6 +247,7 @@ func (conn MemoryDaxConn) Rollback(ag sabi.AsyncGroup) {
 }
 
 func (conn MemoryDaxConn) ForceBack(ag sabi.AsyncGroup) {
+	conn.buf.Reset()
 }
 
 func (conn MemoryDaxConn) Close() {
