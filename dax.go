@@ -140,9 +140,9 @@ var (
 // If a DaxSrc is tried to register with a name already registered, it is
 // ignored and a DaxSrc registered with the same name first is used.
 // And this method ignore adding new DaxSrc(s) after Setup or beginning of Txn.
-func Uses(name string, ds DaxSrc) errs.Err {
+func Uses(name string, ds DaxSrc) {
 	if isGlobalDaxSrcsFixed {
-		return errs.Ok()
+		return
 	}
 
 	ent := &daxSrcEntry{name: name, ds: ds}
@@ -155,8 +155,6 @@ func Uses(name string, ds DaxSrc) errs.Err {
 		globalDaxSrcEntryList.last.next = ent
 		globalDaxSrcEntryList.last = ent
 	}
-
-	return errs.Ok()
 }
 
 // Setup is the function that make all globally registered DaxSrc(s) usable.
