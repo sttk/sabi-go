@@ -539,10 +539,10 @@ This program is free software under MIT License.<br>
 See the file LICENSE in this distribution for more details.
 
 
-[repo-url]: https://github.com/sttk/sabi-go
+[repo-url]: https://github.com/sttk/sabi
 [pkg-dev-img]: https://pkg.go.dev/badge/github.com/sttk/sabi.svg
 [pkg-dev-url]: https://pkg.go.dev/github.com/sttk/sabi
-[ci-img]: https://github.com/sttk/sabi-go/actions/workflows/go.yml/badge.svg?branch=main
-[ci-url]: https://github.com/sttk/sabi-go/actions
+[ci-img]: https://github.com/sttk/sabi/actions/workflows/go.yml/badge.svg?branch=main
+[ci-url]: https://github.com/sttk/sabi/actions
 [mit-img]: https://img.shields.io/badge/license-MIT-green.svg
 [mit-url]: https://opensource.org/licenses/MIT
