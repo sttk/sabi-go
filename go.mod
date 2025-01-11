@@ -3,7 +3,7 @@ module github.com/sttk/sabi
 go 1.18
 
 require (
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.10.0
 	github.com/sttk/orderedmap v1.0.0
 )
 

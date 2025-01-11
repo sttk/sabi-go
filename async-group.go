@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Takayuki Sato. All Rights Reserved.
+// Copyright (C) 2023-2025 Takayuki Sato. All Rights Reserved.
 // This program is free software under MIT License.
 // See the file LICENSE in this distribution for more details.
 
@@ -6,34 +6,31 @@ package sabi
 
 import (
 	"sync"
-
-	"github.com/sttk/sabi/errs"
 )
 
-// AsyncGroup is the interface to execute added functions asynchronously.
-// The method: Add is to add target functions.
-// This interface is used as an argument of DaxSrc#Setup, DaxConn#Commit, and DaxConn#Rollback.
-type AsyncGroup interface {
-	Add(fn func() errs.Err)
+type errEntry struct {
+	name string
+	err  Err
+	next *errEntry
 }
 
-type errEntry[N comparable] struct {
-	name N
-	err  errs.Err
-	next *errEntry[N]
-}
-
-type asyncGroupAsync[N comparable] struct {
+// AsyncGroup manages multiple asynchronous operations and allows for waiting until all operations
+// have completed.
+// It also handles error collection to store errors that encounter during executions.
+type AsyncGroup struct {
 	wg      sync.WaitGroup
-	errHead *errEntry[N]
-	errLast *errEntry[N]
+	errHead *errEntry
+	errLast *errEntry
 	mutex   sync.Mutex
-	name    N
+	name    string
 }
 
-func (ag *asyncGroupAsync[N]) Add(fn func() errs.Err) {
+// Adds a new asynchronous operation to this instance.
+// The operation is provided as a function that returns an Err.
+// If the function encounters an error, it is recorded internally.
+func (ag *AsyncGroup) Add(fn func() Err) {
 	ag.wg.Add(1)
-	go func(name N) {
+	go func(name string) {
 		defer ag.wg.Done()
 		err := fn()
 		if err.IsNotOk() {
@@ -44,12 +41,18 @@ func (ag *asyncGroupAsync[N]) Add(fn func() errs.Err) {
 	}(ag.name)
 }
 
-func (ag *asyncGroupAsync[N]) wait() {
+func (ag *AsyncGroup) join() map[string]Err {
 	ag.wg.Wait()
+
+	m := make(map[string]Err)
+	for ent := ag.errHead; ent != nil; ent = ent.next {
+		m[ent.name] = ent.err
+	}
+	return m
 }
 
-func (ag *asyncGroupAsync[N]) addErr(name N, err errs.Err) {
-	ent := &errEntry[N]{name: name, err: err}
+func (ag *AsyncGroup) addErr(name string, err Err) {
+	ent := &errEntry{name: name, err: err}
 	if ag.errLast == nil {
 		ag.errHead = ent
 		ag.errLast = ent
@@ -57,24 +60,4 @@ func (ag *asyncGroupAsync[N]) addErr(name N, err errs.Err) {
 		ag.errLast.next = ent
 		ag.errLast = ent
 	}
-}
-
-func (ag *asyncGroupAsync[N]) hasErr() bool {
-	return (ag.errHead != nil)
-}
-
-func (ag *asyncGroupAsync[N]) makeErrs() map[N]errs.Err {
-	m := make(map[N]errs.Err)
-	for ent := ag.errHead; ent != nil; ent = ent.next {
-		m[ent.name] = ent.err
-	}
-	return m
-}
-
-type asyncGroupSync struct {
-	err errs.Err
-}
-
-func (ag *asyncGroupSync) Add(fn func() errs.Err) {
-	ag.err = fn()
 }
